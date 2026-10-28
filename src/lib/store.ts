@@ -14,6 +14,7 @@ import {
   seedReports, seedTickets, seedPayments, defaultPlans, seedAuditLogs,
   seedScoutingReports, seedSavedSearches, seedPrivateNotes, seedConsentRequests,
 } from './demo-data';
+import { isApiMode, pushAction } from './api-mode';
 
 let auditCounter = 100;
 let notifCounter = 100;
@@ -24,6 +25,9 @@ const today = () => new Date().toLocaleDateString('fr-FR', { day: 'numeric', mon
 export interface CourtLinkStore extends DemoState {
   hydrated: boolean;
   flashToasted: string[];
+  dataSource: 'demo' | 'api';
+  enterApiSession: (user: { id: string; name: string; role: Role }) => void;
+  applyServerState: (data: Partial<DemoState>) => void;
   // session
   login: (role: Role, name?: string) => void;
   logout: () => void;
@@ -131,6 +135,15 @@ export const useCourtLink = create<CourtLinkStore>()(
       currentUserId: '',
       hydrated: false,
       flashToasted: [],
+      dataSource: 'demo',
+
+      enterApiSession: (user) => {
+        set({ role: user.role, loggedIn: true, currentUserId: user.id, dataSource: 'api', hydrated: true });
+        roleNames[user.role] = user.name;
+      },
+
+      applyServerState: (data) =>
+        set(s => ({ ...s, ...data, hydrated: true })),
 
       addAudit: (action, scope) => set(s => ({
         auditLogs: [{ id: `l${auditCounter++}`, time: now(), actor: roleNames[s.role], action, scope }, ...s.auditLogs].slice(0, 60),
@@ -154,6 +167,7 @@ export const useCourtLink = create<CourtLinkStore>()(
 
       updatePlayer: (id, patch) => {
         set(s => ({ players: s.players.map(p => (p.id === id ? { ...p, ...patch } : p)) }));
+        if (isApiMode()) void pushAction('updatePlayer', { id, patch });
         toast.success('Profil mis à jour — l\u2019annuaire public est synchronisé.');
         get().addAudit(`Mise à jour du profil joueur ${id}`, 'Profil');
       },
@@ -162,15 +176,18 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           players: s.players.map(p => (p.id === playerId ? { ...p, stats: [stat, ...p.stats] } : p)),
         }));
+        if (isApiMode()) void pushAction('addSeasonStat', { playerId, stat });
         toast.success(`Statistiques ${stat.season} ajoutées (${stat.competition}).`);
         get().addAudit(`Ajout de stats ${stat.season} pour ${playerId}`, 'Profil');
       },
 
       createOpportunity: (opp) => {
         const id = `o${Date.now()}`;
+        const created = { ...opp, id, applicants: 0, status: 'Ouverte' as const, createdAt: today() };
         set(s => ({
-          opportunities: [{ ...opp, id, applicants: 0, status: 'Ouverte', createdAt: today() }, ...s.opportunities],
+          opportunities: [created, ...s.opportunities],
         }));
+        if (isApiMode()) void pushAction('createOpportunity', created);
         toast.success('Opportunité publiée — visible immédiatement dans l\u2019annuaire public.');
         get().addAudit(`Publication de l\u2019opportunité « ${opp.title} »`, 'Opportunités');
         get().addNotification({ title: 'Nouvelle opportunité', body: `${opp.org} a publié « ${opp.title} » à ${opp.city}.`, kind: 'info' });
@@ -179,6 +196,7 @@ export const useCourtLink = create<CourtLinkStore>()(
 
       updateOpportunity: (id, patch) => {
         set(s => ({ opportunities: s.opportunities.map(o => (o.id === id ? { ...o, ...patch } : o)) }));
+        if (isApiMode()) void pushAction('updateOpportunity', { id, patch });
         toast.success('Opportunité mise à jour.');
         get().addAudit(`Modification de l\u2019opportunité ${id} (${patch.status ?? 'contenu'})`, 'Opportunités');
       },
@@ -202,6 +220,7 @@ export const useCourtLink = create<CourtLinkStore>()(
           applications: [app, ...st.applications],
           opportunities: st.opportunities.map(o => (o.id === oppId ? { ...o, applicants: o.applicants + 1 } : o)),
         }));
+        if (isApiMode()) void pushAction('applyToOpportunity', { oppId, motivation });
         toast.success('Candidature envoyée — le club la voit dans son pipeline.');
         get().addAudit(`Candidature de ${app.playerName} sur « ${opp.title} »`, 'Candidatures');
         get().addNotification({ title: 'Candidature envoyée', body: `Votre dossier pour « ${opp.title} » est en attente d\u2019examen par ${opp.org}.`, kind: 'success' });
@@ -212,6 +231,7 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           applications: s.applications.map(a => (a.id === appId ? { ...a, status, updatedAt: 'À l\u2019instant', history: [...a.history, { status, date: today() }] } : a)),
         }));
+        if (isApiMode()) void pushAction('setApplicationStatus', { appId, status });
         toast.success(`Pipeline mis à jour : ${status}`);
         get().addAudit(`Statut candidature ${appId} → ${status}`, 'Recrutement');
         if (app) get().addNotification({ title: 'Candidature mise à jour', body: `${app.orgId === 'org1' ? 'Votre club' : 'L\u2019organisation'} a mis à jour « ${app.opportunityTitle} » : ${status}.`, kind: status === 'Refusé' ? 'warning' : 'success' });
@@ -219,7 +239,9 @@ export const useCourtLink = create<CourtLinkStore>()(
 
       createEvent: (ev) => {
         const id = `e${Date.now()}`;
-        set(s => ({ events: [{ ...ev, id, participants: 0, status: 'Ouvert', image: '/img/event-arena.jpg' }, ...s.events] }));
+        const created = { ...ev, id, participants: 0, status: 'Ouvert' as const, image: '/img/event-arena.jpg' };
+        set(s => ({ events: [created, ...s.events] }));
+        if (isApiMode()) void pushAction('createEvent', created);
         toast.success('Événement créé et publié dans le calendrier public.');
         get().addAudit(`Création de l\u2019événement « ${ev.title} »`, 'Événements');
         return id;
@@ -243,12 +265,14 @@ export const useCourtLink = create<CourtLinkStore>()(
           registrations: [reg, ...st.registrations],
           events: st.events.map(e => (e.id === eventId ? { ...e, participants: e.participants + 1 } : e)),
         }));
+        if (isApiMode()) void pushAction('registerEvent', { eventId });
         toast.success('Inscription enregistrée — l\u2019organisateur la voit dans sa liste.');
         get().addAudit(`Inscription de ${reg.playerName} à « ${ev.title} »`, 'Événements');
       },
 
       setRegistrationStatus: (regId, status) => {
         set(s => ({ registrations: s.registrations.map(r => (r.id === regId ? { ...r, status } : r)) }));
+        if (isApiMode()) void pushAction('setRegistrationStatus', { regId, status });
         toast.success(`Inscription mise à jour : ${status}`);
         get().addAudit(`Statut inscription ${regId} → ${status}`, 'Événements');
       },
@@ -256,12 +280,14 @@ export const useCourtLink = create<CourtLinkStore>()(
       toggleFavorite: (playerId) => {
         const fav = get().favorites.includes(playerId);
         set(s => ({ favorites: fav ? s.favorites.filter(f => f !== playerId) : [...s.favorites, playerId] }));
+        if (isApiMode()) void pushAction('toggleFavorite', { playerId });
         toast(fav ? 'Retiré des favoris' : 'Ajouté aux favoris de prospection');
       },
 
       toggleFollow: (orgId) => {
         const f = get().followedClubs.includes(orgId);
         set(s => ({ followedClubs: f ? s.followedClubs.filter(x => x !== orgId) : [...s.followedClubs, orgId] }));
+        if (isApiMode()) void pushAction('toggleFollow', { orgId });
         toast(f ? 'Club retiré de vos suivis' : 'Club suivi — vous recevrez ses opportunités');
       },
 
@@ -271,6 +297,7 @@ export const useCourtLink = create<CourtLinkStore>()(
             ? { ...c, messages: [...c.messages, { from: 'Vous', body, time: now(), me: true }], unread: false, updatedAt: 'À l\u2019instant' }
             : c)),
         }));
+        if (isApiMode()) void pushAction('sendMessage', { convId, body });
         toast.success('Message envoyé.');
       },
 
@@ -280,22 +307,24 @@ export const useCourtLink = create<CourtLinkStore>()(
           subject, messages: [{ from: 'Vous', body, time: now(), me: true }], unread: false, updatedAt: 'À l\u2019instant',
         };
         set(s => ({ conversations: [conv, ...s.conversations] }));
+        if (isApiMode()) void pushAction('startConversation', { targetName, subject, body });
         toast.success(`Message envoyé à ${targetName}.`);
         get().addAudit(`Nouveau message à ${targetName}`, 'Messagerie');
       },
 
-      markConversationRead: (convId) => set(s => ({
+      markConversationRead: (convId) => { set(s => ({
         conversations: s.conversations.map(c => (c.id === convId ? { ...c, unread: false } : c)),
-      })),
+      })); if (isApiMode()) void pushAction('markConversationRead', { convId }); },
 
-      markAllNotificationsRead: () => set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
-      markNotificationRead: (id) => set(s => ({ notifications: s.notifications.map(n => (n.id === id ? { ...n, read: true } : n)) })),
+      markAllNotificationsRead: () => { set(s => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })); if (isApiMode()) void pushAction('markAllNotificationsRead', {}); },
+      markNotificationRead: (id) => { set(s => ({ notifications: s.notifications.map(n => (n.id === id ? { ...n, read: true } : n)) })); if (isApiMode()) void pushAction('markNotificationRead', { id }); },
 
       decideVerification: (id, decision, justification) => {
         const v = get().verifications.find(x => x.id === id);
         set(s => ({
           verifications: s.verifications.map(x => (x.id === id ? { ...x, status: decision, justification, reviewer: roleNames[get().role] } : x)),
         }));
+        if (isApiMode()) void pushAction('decideVerification', { id, decision, justification });
         if (v && decision === 'Approuvée') {
           if (v.subjectType === 'Organisation') set(s => ({ organizations: s.organizations.map(o => (o.id === v.subjectId ? { ...o, verified: true, verificationStatus: 'vérifiée' } : o)) }));
           if (v.subjectType === 'Joueur') set(s => ({ players: s.players.map(p => (p.id === v.subjectId ? { ...p, verified: true } : p)) }));
@@ -312,12 +341,14 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           verifications: [{ id: `v${Date.now()}`, subject, subjectType, subjectId: s.currentUserId || 'self', status: 'En attente', submitted: 'À l\u2019instant', documents }, ...s.verifications],
         }));
+        if (isApiMode()) void pushAction('submitVerification', { subject, subjectType, documents });
         toast.success('Demande de vérification transmise à la modération.');
         get().addAudit(`Demande de vérification : ${subject}`, 'Vérification');
       },
 
       decideReport: (id, decision, action) => {
         set(s => ({ reports: s.reports.map(r => (r.id === id ? { ...r, status: decision, action } : r)) }));
+        if (isApiMode()) void pushAction('decideReport', { id, decision, action });
         toast.success(`Signalement : ${decision}`);
         get().addAudit(`Signalement ${id} → ${decision}${action ? ` (${action})` : ''}`, 'Modération');
       },
@@ -326,24 +357,28 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           reports: [{ id: `rp${Date.now()}`, subject: reason, target, reason, details, status: 'À traiter', priority: 'Normale', submitted: 'À l\u2019instant', reporter: 'Vous' }, ...s.reports],
         }));
+        if (isApiMode()) void pushAction('submitReport', { target, reason, details });
         toast.success('Signalement transmis — merci, la modération prend le relais.');
         get().addAudit(`Nouveau signalement sur ${target}`, 'Modération');
       },
 
       hideContent: (contentId) => {
         set(s => ({ hiddenContent: [...s.hiddenContent, contentId] }));
+        if (isApiMode()) void pushAction('hideContent', { contentId });
         toast('Contenu masqué temporairement (visible dans le journal).');
         get().addAudit(`Masquage du contenu ${contentId}`, 'Modération');
       },
 
       unhideContent: (contentId) => {
         set(s => ({ hiddenContent: s.hiddenContent.filter(c => c !== contentId) }));
+        if (isApiMode()) void pushAction('unhideContent', { contentId });
         toast.success('Contenu réaffiché.');
         get().addAudit(`Réaffichage du contenu ${contentId}`, 'Modération');
       },
 
       suspendAccount: (accountId, name) => {
         set(s => ({ suspendedAccounts: [...s.suspendedAccounts, accountId] }));
+        if (isApiMode()) void pushAction('suspendAccount', { accountId, name });
         if (accountId.startsWith('p')) set(s => ({ players: s.players.map(p => (p.id === accountId ? { ...p, suspended: true } : p)) }));
         if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspended: true } : o)) }));
         toast(`Compte ${name} suspendu — l\u2019état est répercuté partout.`);
@@ -352,6 +387,7 @@ export const useCourtLink = create<CourtLinkStore>()(
 
       unsuspendAccount: (accountId) => {
         set(s => ({ suspendedAccounts: s.suspendedAccounts.filter(a => a !== accountId) }));
+        if (isApiMode()) void pushAction('unsuspendAccount', { accountId });
         if (accountId.startsWith('p')) set(s => ({ players: s.players.map(p => (p.id === accountId ? { ...p, suspended: false } : p)) }));
         if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspended: false } : o)) }));
         toast.success('Compte réactivé.');
@@ -362,6 +398,7 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           scoutingReports: [{ ...r, id: `sr${Date.now()}`, date: today(), scout: roleNames[get().role] }, ...s.scoutingReports],
         }));
+        if (isApiMode()) void pushAction('addScoutingReport', r);
         toast.success('Rapport de scouting enregistré (confidentiel).');
         get().addAudit(`Rapport de scouting ajouté sur ${r.playerName}`, 'Scouting');
       },
@@ -370,21 +407,25 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           privateNotes: [{ id: `pn${Date.now()}`, targetId, targetName, body, date: today(), author: roleNames[get().role] }, ...s.privateNotes],
         }));
+        if (isApiMode()) void pushAction('addPrivateNote', { targetId, targetName, body });
         toast.success('Note privée enregistrée.');
       },
 
       addSavedSearch: (name, query, filters) => {
         set(s => ({ savedSearches: [...s.savedSearches, { id: `ss${Date.now()}`, name, query, filters, alerts: true }] }));
+        if (isApiMode()) void pushAction('addSavedSearch', { name, query, filters });
         toast.success(`Recherche « ${name} » sauvegardée avec alertes.`);
       },
 
       removeSavedSearch: (id) => {
         set(s => ({ savedSearches: s.savedSearches.filter(s2 => s2.id !== id) }));
+        if (isApiMode()) void pushAction('removeSavedSearch', { id });
         toast('Recherche supprimée.');
       },
 
       decideConsent: (id, decision) => {
         set(s => ({ consentRequests: s.consentRequests.map(c => (c.id === id ? { ...c, status: decision } : c)) }));
+        if (isApiMode()) void pushAction('decideConsent', { id, decision });
         toast.success(decision === 'Approuvée' ? 'Consentement accordé.' : 'Consentement refusé — le demandeur est notifié.');
         get().addAudit(`Consentement ${id} : ${decision}`, 'Consentements');
       },
@@ -394,6 +435,7 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(st => ({
           consentRequests: [{ id: `cr${Date.now()}`, guardianId: 'g1', playerId, playerName, requester: roleNames[st.role], kind, status: 'En attente', date: 'À l\u2019instant' }, ...st.consentRequests],
         }));
+        if (isApiMode()) void pushAction('requestContact', { playerId, playerName, kind });
         toast.success(`Demande de ${kind.toLowerCase()} transmise${s.players.find(p => p.id === playerId)?.isMinor ? ' — validation du tuteur légal requise.' : '.'}`);
         get().addAudit(`Demande de contact (${kind}) sur ${playerName}`, 'Consentements');
       },
@@ -408,24 +450,28 @@ export const useCourtLink = create<CourtLinkStore>()(
           payments: [payment, ...s.payments],
           subscription: { planId: plan.id, status: 'Actif', renews: '30 juin 2027', since: today() },
         }));
+        if (isApiMode()) void pushAction('checkout', { planId: plan.id, planName: plan.name, amount: payment.amount, method, renews: '30 juin 2027' });
         toast.success(`Paiement simulé confirmé — ${plan.name} actif. Aucune transaction réelle.`);
         get().addAudit(`Abonnement ${plan.name} activé (${payment.invoice})`, 'Facturation');
       },
 
       cancelSubscription: () => {
         set(s => ({ subscription: { planId: 'free', status: 'Expiré', renews: '—', since: today() } }));
+        if (isApiMode()) void pushAction('cancelSubscription', {});
         toast('Abonnement résilié (retour au plan Découverte).');
         get().addAudit('Résiliation d\u2019abonnement', 'Facturation');
       },
 
       updatePlan: (id, patch) => {
         set(s => ({ plans: s.plans.map(p => (p.id === id ? { ...p, ...patch } : p)) }));
+        if (isApiMode()) void pushAction('updatePlan', { id, patch });
         toast.success('Plan tarifaire mis à jour — la page publique est synchronisée.');
         get().addAudit(`Modification du plan ${id}`, 'Administration');
       },
 
       resolvePayment: (id, status) => {
         set(s => ({ payments: s.payments.map(p => (p.id === id ? { ...p, status } : p)) }));
+        if (isApiMode()) void pushAction('resolvePayment', { id, status });
         toast.success(`Paiement ${id} : ${status}`);
         get().addAudit(`Paiement ${id} → ${status}`, 'Facturation');
       },
@@ -434,6 +480,7 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           tickets: [{ id: `t${Date.now()}`, subject, requester: roleNames[s.role], topic, status: 'Ouvert', priority: 'Normale', opened: 'À l\u2019instant', messages: [{ from: 'user', body, time: 'À l\u2019instant' }] }, ...s.tickets],
         }));
+        if (isApiMode()) void pushAction('createTicket', { subject, topic, body });
         toast.success('Ticket envoyé — le support répond en général sous 24 h.');
         get().addAudit(`Nouveau ticket : ${subject}`, 'Support');
       },
@@ -442,18 +489,21 @@ export const useCourtLink = create<CourtLinkStore>()(
         set(s => ({
           tickets: s.tickets.map(t => (t.id === id ? { ...t, messages: [...t.messages, { from: 'support', body, time: 'À l\u2019instant' }], status: 'En cours' } : t)),
         }));
+        if (isApiMode()) void pushAction('replyTicket', { id, body });
         toast.success('Réponse envoyée au demandeur.');
         get().addAudit(`Réponse au ticket ${id}`, 'Support');
       },
 
       setTicketStatus: (id, status) => {
         set(s => ({ tickets: s.tickets.map(t => (t.id === id ? { ...t, status } : t)) }));
+        if (isApiMode()) void pushAction('setTicketStatus', { id, status });
         toast.success(`Ticket : ${status}`);
         get().addAudit(`Ticket ${id} → ${status}`, 'Support');
       },
 
       updateSettings: (patch) => {
         set(s => ({ settings: { ...s.settings, ...patch } }));
+        if (isApiMode()) void pushAction('updateSettings', patch);
         toast.success('Paramètres enregistrés.');
         get().addAudit(`Paramètres mis à jour : ${Object.keys(patch).join(', ')}`, 'Administration');
       },
@@ -466,7 +516,8 @@ export const useCourtLink = create<CourtLinkStore>()(
     {
       name: 'courtlink-demo-v2',
       partialize: (state) => {
-        const { hydrated, flashToasted, ...rest } = state;
+        if (isApiMode()) return {} as CourtLinkStore;
+        const { hydrated, flashToasted, dataSource, ...rest } = state;
         return rest as CourtLinkStore;
       },
       onRehydrateStorage: () => () => {

@@ -7,6 +7,8 @@ import {
 import * as icons from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { signOut } from 'next-auth/react';
+import { isApiMode } from '@/lib/api-mode';
 import { roleLabels, roleMenus, routeRoles } from '@/lib/permissions';
 import { Logo, ThemeToggle } from '@/components/layout/Chrome';
 import { cn } from '@/lib/utils';
@@ -110,7 +112,7 @@ export function WorkspaceShell({ route, children }: { route: string; children: R
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-destructive">
             <RotateCcw size={13} /> Réinitialiser les données démo
           </button>
-          <button onClick={() => { logout(); navigate('/'); }} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-destructive">
+          <button onClick={() => { if (isApiMode()) void signOut(); logout(); navigate('/'); }} className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-destructive">
             <LogOut size={13} /> Quitter la démonstration
           </button>
         </div>

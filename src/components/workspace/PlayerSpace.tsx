@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Eye, Play, Send, Star, TrendingUp, User, Plus, Trash2, Check, Clock,
   XCircle, CalendarDays, CreditCard, Settings, Bell, Globe, UsersRound,
-  MailOpen, Mail, Download, Search,
+  MailOpen, Mail, Download, Search, ImageIcon, Video, Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { uploadMedia } from '@/lib/api-mode';
 import type { ApplicationStatus, Visibility } from '@/lib/types';
 import { POSITIONS } from '@/lib/demo-data';
 import { WorkspaceHeader } from './Shell';
@@ -127,6 +129,27 @@ export function PlayerProfileEdit() {
   const me = players.find(p => p.id === (currentUserId || 'p1')) ?? players[0];
   const [form, setForm] = useState({ bio: me.bio, city: me.city, height: me.height, position: me.position, availability: me.availability, education: me.education, visibility: me.visibility as Visibility, club: me.club, number: me.number });
   const [stat, setStat] = useState({ season: '2026-27', competition: 'Championnat Littoral', ppg: 12, rpg: 4, apg: 3, games: 10 });
+  const [upBusy, setUpBusy] = useState<'photo' | 'video' | null>(null);
+  const [upErr, setUpErr] = useState('');
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+
+  const sendMedia = async (file: File, kind: 'photos' | 'videos') => {
+    setUpBusy(kind === 'photos' ? 'photo' : 'video'); setUpErr('');
+    try {
+      const out = await uploadMedia(file, kind);
+      if (kind === 'photos') {
+        updatePlayer(me.id, { photo: out.url });
+        toast.success('Photo mise en ligne (Cloudinary — dossier courtlink/photos).');
+      } else {
+        updatePlayer(me.id, { videos: [{ id: `v${Date.now()}`, label: file.name.slice(0, 42), url: out.url, kind: 'highlights' }, ...me.videos] });
+        toast.success('Vidéo ajoutée à votre profil (Cloudinary — dossier courtlink/videos).');
+      }
+    } catch (e) {
+      setUpErr((e as Error).message);
+    }
+    setUpBusy(null);
+  };
 
   const upd = (patch: Partial<typeof form>) => setForm(f => ({ ...f, ...patch }));
 
@@ -192,6 +215,34 @@ export function PlayerProfileEdit() {
         </div>
 
         <div className="space-y-6">
+          <section className="card-court p-6">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><ImageIcon size={17} className="text-[var(--ball)]" /> Photo & vidéos</h2>
+            <p className="mb-4 text-xs text-muted-foreground">Upload réel vers Cloudinary (dossier « courtlink/ ») : photo de profil et extrait vidéo de highlights.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {me.photo
+                ? <img src={me.photo} alt="Photo de profil" className="h-16 w-16 rounded-xl border border-border object-cover" />
+                : <span className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border text-[10px] text-muted-foreground">Aucune</span>}
+              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void sendMedia(f, 'photos'); e.target.value = ''; }} />
+              <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void sendMedia(f, 'videos'); e.target.value = ''; }} />
+              <button onClick={() => photoRef.current?.click()} disabled={upBusy !== null} className="btn-ghosty !py-2 text-xs disabled:opacity-60">
+                {upBusy === 'photo' ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Photo
+              </button>
+              <button onClick={() => videoRef.current?.click()} disabled={upBusy !== null} className="btn-ghosty !py-2 text-xs disabled:opacity-60">
+                {upBusy === 'video' ? <Loader2 size={13} className="animate-spin" /> : <Video size={13} />} Vidéo
+              </button>
+            </div>
+            {upErr && <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-2.5 text-[11px] text-red-400">{upErr}</p>}
+            {me.videos.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                {me.videos.slice(0, 4).map(v => (
+                  <a key={v.id} href={v.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:border-[var(--ball)]">
+                    <Video size={13} className="text-[var(--ball)]" /> <span className="truncate">{v.label}</span>
+                    <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">{v.kind}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
           <section className="card-court p-6">
             <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><Globe size={17} className="text-[var(--ball)]" /> Visibilité & confidentialité</h2>
             <div className="space-y-2">

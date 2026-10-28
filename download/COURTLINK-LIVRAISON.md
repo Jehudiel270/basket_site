@@ -139,3 +139,40 @@ src/
 ```
 
 **Pile technique :** Next.js 16 (App Router, Turbopack) · TypeScript · Tailwind CSS 4 · shadcn/ui · Zustand (persist localStorage) · three.js / @react-three/fiber · lucide-react.
+
+---
+
+## Mise à jour — Mode réel (BDD + authentification)
+
+CourtLink fonctionne désormais en **deux modes**, pilotés par `NEXT_PUBLIC_DATA_SOURCE` :
+
+| Mode | Valeur | Données | Auth |
+|---|---|---|---|
+| Démonstration | `demo` | localStorage + données fictives | comptes sans mot de passe |
+| **Réel** | `api` | vraie base (Neon/SQLite) via `/api/state` + `/api/actions/*` | NextAuth : email + mot de passe bcrypt, sessions JWT |
+
+### Architecture mode réel
+- `prisma/schema.prisma` — schéma PostgreSQL de production (24 modèles)
+- `prisma/schema.local.prisma` — miroir SQLite pour le sandbox
+- `src/lib/auth.ts` + `src/app/api/auth/*` — inscription/connexion réelles
+- `src/lib/server/data.ts` — snapshot scopé par rôle (`/api/state`)
+- `src/lib/server/actions.ts` — bus d'actions sécurisé (session + ownership + validation)
+- `src/app/api/upload` — signature Cloudinary (dossier `courtlink/<type>`)
+- `src/lib/api-mode.ts` — client (hydrate + réplication des mutations)
+
+### Commandes
+```bash
+bun prisma/seed.ts          # admin + plans + comptes démo + contenu (SEED_DEMO=0 pour minimiser)
+bunx prisma db push --schema prisma/schema.local.prisma   # sandbox SQLite
+bunx prisma db push         # production Neon (après avoir rempli DATABASE_URL)
+```
+
+### Comptes réels semés (mot de passe : demo1234 — À CHANGER)
+admin@demo.courtlink · semevo@ · tuteur@ · club@ · scout@ · events@ · moderation@ · support@demo.courtlink
++ admin réel : admin@courtlink.bj (mot de passe `courtlink-admin-2026`, à changer via ADMIN_PASSWORD au seed)
+
+### Restant pour la mise en ligne
+1. Clés Neon (DATABASE_URL) et Cloudinary (3 valeurs) → voir `COURTLINK-CLES.md`
+2. Déploiement Vercel (variables d'env à copier)
+3. Paiements réels (restent simulés — aucun encaissement) et réinitialisation de mot de passe
+   volontairement hors périmètre (« pas mail »).

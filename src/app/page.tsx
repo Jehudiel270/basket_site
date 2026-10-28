@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import { SessionProvider, signIn, useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 import { useHashRoute } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { isApiMode, fetchState } from '@/lib/api-mode';
+import { demoAccounts } from '@/lib/permissions';
+import type { DemoState } from '@/lib/types';
 import { PublicHeader, PublicFooter } from '@/components/layout/Chrome';
 import { WorkspaceShell } from '@/components/workspace/Shell';
 import { Hero } from '@/components/home/Hero';
@@ -41,6 +46,22 @@ import {
 import { SectionHead } from '@/components/common/Bits';
 import { navigate } from '@/lib/router';
 import { cn } from '@/lib/utils';
+
+/** En mode réel : synchronise le store avec la session NextAuth + /api/state. */
+function RealSessionSync() {
+  const { status } = useSession();
+  useEffect(() => {
+    if (!isApiMode() || status === 'loading') return;
+    let alive = true;
+    fetchState<DemoState>().then(st => {
+      if (!alive) return;
+      if (st) useCourtLink.setState(s => ({ ...s, ...st, dataSource: 'api', hydrated: true }));
+      else useCourtLink.setState({ hydrated: true });
+    });
+    return () => { alive = false; };
+  }, [status]);
+  return null;
+}
 
 export default function Home() {
   const { route } = useHashRoute();
@@ -118,7 +139,8 @@ export default function Home() {
 
   if (inWorkspace) {
     return (
-      <>
+      <SessionProvider>
+        <RealSessionSync />
         <PublicHeader route={route} />
         <div className="min-h-[calc(100vh-4rem)] flex flex-col">
           <WorkspaceShell route={route}>
@@ -126,7 +148,7 @@ export default function Home() {
           </WorkspaceShell>
           <PublicFooter />
         </div>
-      </>
+      </SessionProvider>
     );
   }
 
@@ -182,11 +204,14 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <PublicHeader route={route} />
-      <main className="flex-1" key={route}>{page}</main>
-      <PublicFooter />
-    </div>
+    <SessionProvider>
+      <RealSessionSync />
+      <div className="flex min-h-screen flex-col">
+        <PublicHeader route={route} />
+        <main className="flex-1" key={route}>{page}</main>
+        <PublicFooter />
+      </div>
+    </SessionProvider>
   );
 }
 
@@ -236,7 +261,20 @@ function NotFoundWorkspace() {
 
 /** Lanceur de comptes démo (page /demo) */
 function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
-  const { login, role, loggedIn } = useCourtLink();
+  const { login, role, loggedIn, dataSource } = useCourtLink();
+
+  const enter = async (role: import('@/lib/types').Role, target: string) => {
+    if (dataSource === 'api') {
+      const account = demoAccounts.find(a => a.role === role);
+      if (!account) return;
+      const res = await signIn('credentials', { redirect: false, email: account.email, password: 'demo1234' });
+      if (res?.error) { toast.error('Comptes démo absents de la base réelle — exécutez bun prisma/seed.ts.'); return; }
+      navigate(target);
+    } else {
+      login(role);
+      navigate(target);
+    }
+  };
   const accounts: { role: import('@/lib/types').Role; label: string; note: string; target: string }[] = [
     { role: 'player', label: 'Joueur', note: 'Sèmèvo H., arrière U21 vérifié', target: '/app' },
     { role: 'guardian', label: 'Parent / tuteur', note: 'Consentements & protection mineurs', target: '/app' },
@@ -262,7 +300,7 @@ function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
               <p className="font-display text-sm font-bold">{a.label}</p>
               <p className="text-xs text-muted-foreground">{a.note}</p>
             </div>
-            <button onClick={() => { login(a.role); navigate(a.target); }} className="btn-ball !py-2 text-xs">Entrer</button>
+            <button onClick={() => enter(a.role, a.target)} className="btn-ball !py-2 text-xs">Entrer</button>
           </div>
         ))}
       </div>

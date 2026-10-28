@@ -6,6 +6,8 @@ import {
   Crown, HeartHandshake, Search, Upload, Check, Mail, MessageSquare, Send,
   Flag, KeyRound, Smartphone, FileText, Scale, Eye, Lock, AlertTriangle, Play, RefreshCw, Target,
 } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { toast } from 'sonner';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { demoAccounts, roleLabels } from '@/lib/permissions';
@@ -15,9 +17,24 @@ import { cn } from '@/lib/utils';
 
 /* ── Connexion avec comptes démo ── */
 export function LoginPage() {
-  const { login } = useCourtLink();
+  const { login, dataSource } = useCourtLink();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dataSource === 'api') {
+      setBusy(true); setErr('');
+      const res = await signIn('credentials', { redirect: false, email, password: pwd });
+      setBusy(false);
+      if (res?.error) { setErr('E-mail ou mot de passe incorrect.'); return; }
+      navigate('/app');
+    } else {
+      login('player', 'S\u00e8m\u00e8vo Hountondji');
+    }
+  };
 
   return (
     <div className="mx-auto grid min-h-[80vh] max-w-6xl gap-10 px-4 py-10 md:px-6 lg:grid-cols-2">
@@ -25,9 +42,12 @@ export function LoginPage() {
         <button onClick={() => navigate('/')} className="mb-6 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[var(--ball)]"><ChevronLeft size={13} /> Accueil</button>
         <h1 className="font-display text-3xl font-black md:text-4xl">Connexion</h1>
         <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Cette démonstration n'utilise pas d'authentification sécurisée : choisissez un compte de test à droite, ou saisissez n'importe quel identifiant pour le rôle visiteur avancé.
+          {dataSource === 'api'
+            ? 'Authentification réelle : mot de passe haché (bcrypt), session signée côté serveur. Aucun e-mail de vérification n\u2019est requis.'
+            : "Cette démonstration n'utilise pas d'authentification sécurisée : choisissez un compte de test à droite, ou saisissez n'importe quel identifiant pour le rôle visiteur avancé."}
         </p>
-        <form className="mt-8 max-w-md space-y-3" onSubmit={e => { e.preventDefault(); login('player', 'Sèmèvo Hountondji'); }}>
+        {err && <p className="max-w-md rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">{err}</p>}
+        <form className="mt-8 max-w-md space-y-3" onSubmit={submit}>
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Adresse e-mail</label>
             <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="vous@exemple.bj" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
@@ -40,7 +60,7 @@ export function LoginPage() {
             <label className="flex cursor-pointer items-center gap-2 text-muted-foreground"><input type="checkbox" className="accent-[var(--ball)]" defaultChecked /> Rester connecté (démo)</label>
             <button type="button" onClick={() => navigate('/recuperation')} className="text-[var(--ball)] hover:underline">Mot de passe oublié ?</button>
           </div>
-          <button type="submit" className="btn-ball w-full">Se connecter (compte joueur démo)</button>
+          <button type="submit" disabled={busy} className="btn-ball w-full disabled:opacity-60">{busy ? 'Connexion…' : dataSource === 'api' ? 'Se connecter' : 'Se connecter (compte joueur démo)'}</button>
         </form>
         <p className="mt-5 text-sm text-muted-foreground">
           Pas encore de compte ? <button onClick={() => navigate('/inscription')} className="font-semibold text-[var(--ball)] hover:underline">Créer un compte</button>
@@ -49,11 +69,18 @@ export function LoginPage() {
 
       <div>
         <div className="card-court p-5">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold"><Play size={16} className="text-[var(--ball)]" /> Mode démonstration</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Un clic = connexion instantanée avec le rôle choisi. Le menu, les pages et les permissions s'adaptent.</p>
+          <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold"><Play size={16} className="text-[var(--ball)]" /> {dataSource === 'api' ? 'Comptes de la base réelle' : 'Mode démonstration'}</h2>
+          <p className="mb-4 text-xs text-muted-foreground">{dataSource === 'api' ? 'Comptes semés en base (mot de passe : demo1234) — la connexion passe par la vraie authentification. Changez ces mots de passe avant l\u2019ouverture publique.' : "Un clic = connexion instantanée avec le rôle choisi. Le menu, les pages et les permissions s'adaptent."}</p>
           <div className="grid gap-2">
             {demoAccounts.map(a => (
-              <button key={a.role} onClick={() => { login(a.role, a.name); navigate(a.role === 'admin' ? '/admin' : '/app'); }}
+              <button key={a.role} onClick={() => {
+                if (dataSource === 'api') {
+                  signIn('credentials', { redirect: false, email: a.email, password: 'demo1234' }).then(res => {
+                    if (res?.error) toast.error('Compte démo absent de la base réelle — lancez bun prisma/seed.ts.');
+                    else navigate(a.role === 'admin' ? '/admin' : '/app');
+                  });
+                } else { login(a.role, a.name); navigate(a.role === 'admin' ? '/admin' : '/app'); }
+              }}
                 className="group flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-all hover:border-[var(--ball)] hover:bg-[color-mix(in_oklch,var(--ball)_6%,transparent)]">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_oklch,var(--ball)_14%,transparent)] font-display text-xs font-bold text-[var(--ball)]">
                   {a.name.split(' ').map(x => x[0]).slice(0, 2).join('')}
@@ -78,9 +105,37 @@ export function LoginPage() {
 
 /* ── Inscription avec choix de rôle ── */
 export function RegisterPage() {
-  const { login, settings } = useCourtLink();
+  const { login, settings, dataSource } = useCourtLink();
   const [role, setRole] = useState<Role>('player');
   const [done, setDone] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [country, setCountry] = useState('Bénin');
+  const [phone, setPhone] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dataSource !== 'api') { login(role); setDone(true); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pwd, role, country, phone: phone || undefined, orgName: role === 'club' ? orgName : undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setBusy(false); setErr(data.error || 'Inscription impossible pour le moment.'); return; }
+      const li = await signIn('credentials', { redirect: false, email, password: pwd });
+      if (li?.error) { setBusy(false); setErr('Compte créé — connectez-vous.'); navigate('/connexion'); return; }
+      navigate('/app');
+    } catch {
+      setBusy(false);
+      setErr('Réseau indisponible — réessayez.');
+    }
+  };
 
   const roleCards: { role: Role; icon: typeof User; desc: string }[] = [
     { role: 'player', icon: User, desc: 'Profil sportif, stats, vidéos, candidatures' },
@@ -128,29 +183,36 @@ export function RegisterPage() {
         ))}
       </div>
 
-      <form className="card-court mt-6 max-w-xl p-6" onSubmit={e => { e.preventDefault(); login(role); setDone(true); }}>
+      {err && <p className="mt-4 max-w-xl rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">{err}</p>}
+      <form className="card-court mt-6 max-w-xl p-6" onSubmit={submit}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nom complet *</label>
-            <input required placeholder="Ex : Awa Ndiaye" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
+            <input required value={name} onChange={e => setName(e.target.value)} placeholder="Ex : Awa Ndiaye" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-            <input required type="email" placeholder="vous@exemple.bj" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
+            <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@exemple.bj" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pays *</label>
-            <select className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]">
+            <select value={country} onChange={e => setCountry(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]">
               {['Bénin', "Côte d'Ivoire", 'Togo', 'Sénégal', 'Burkina Faso', 'Cameroun', 'Mali', 'Guinée', 'Nigéria', 'Ghana'].map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Téléphone</label>
-            <input placeholder="+229 …" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+229 …" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
           </div>
+          {role === 'club' && (
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nom de la structure *</label>
+              <input required value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Ex : Cotonou Hoopers Academy" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mot de passe *</label>
-            <input required type="password" placeholder="8 caractères minimum" minLength={8} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
+            <input required type="password" minLength={8} value={pwd} onChange={e => setPwd(e.target.value)} placeholder="8 caractères minimum" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
           </div>
         </div>
         {['club', 'scout', 'organizer'].includes(role) && (
@@ -162,7 +224,7 @@ export function RegisterPage() {
           <input required type="checkbox" className="mt-0.5 accent-[var(--ball)]" />
           J'accepte les <button type="button" onClick={() => navigate('/conditions')} className="text-[var(--ball)] underline">conditions d'utilisation</button> et la <button type="button" onClick={() => navigate('/confidentialite')} className="text-[var(--ball)] underline">politique de confidentialité</button>.
         </label>
-        <button type="submit" className="btn-ball mt-5 w-full">Créer mon compte {roleLabels[role]}</button>
+        <button type="submit" disabled={busy} className="btn-ball mt-5 w-full disabled:opacity-60">{busy ? 'Création…' : `Créer mon compte ${roleLabels[role]}`}</button>
         <p className="mt-3 text-center text-xs text-muted-foreground">Déjà inscrit ? <button type="button" onClick={() => navigate('/connexion')} className="text-[var(--ball)] hover:underline">Se connecter</button></p>
       </form>
     </div>

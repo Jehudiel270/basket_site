@@ -5,6 +5,8 @@ import { Menu, X, Sun, Moon, Bell, LogOut, LayoutDashboard, ChevronDown } from '
 import { useTheme } from 'next-themes';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { signOut } from 'next-auth/react';
+import { isApiMode } from '@/lib/api-mode';
 import { roleLabels } from '@/lib/permissions';
 import { useT, useLang } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -143,7 +145,7 @@ export function PublicHeader({ route }: { route: string }) {
                 <ChevronDown size={12} />
               </button>
               <button
-                onClick={() => { logout(); navigate('/'); }}
+                onClick={() => { if (isApiMode()) void signOut(); logout(); navigate('/'); }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:text-destructive"
                 aria-label="Se déconnecter / Log out"
               >

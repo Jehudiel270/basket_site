@@ -1,0 +1,322 @@
+// CourtLink — miroir SQLite pour le sandbox local (preview mode réel)
+// Même modèle que schema.prisma — seul le datasource change
+// Les champs marqués JSON sont stockés en texte (JSON.stringify) pour rester
+// portables SQLite <-> PostgreSQL sans colonnes Json natives.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  role          String   @default("player") // visitor|player|guardian|club|scout|organizer|moderator|support|admin
+  country       String?
+  phone         String?
+  subPlanId     String?
+  subStatus     String?
+  subRenews     String?
+  subSince      String?
+  createdAt     DateTime @default(now())
+}
+
+model Player {
+  id                 String  @id
+  name               String
+  photo              String  @default("")
+  country            String
+  city               String  @default("")
+  birthDate          String  @default("")
+  height             Float   @default(0)
+  weight             Float   @default(0)
+  position           String  @default("")
+  secondaryPositions String  @default("[]") // JSON
+  dominantHand       String  @default("Droitier")
+  club               String  @default("")
+  number             Int     @default(0)
+  rating             Float   @default(0)
+  verified           Boolean @default(false)
+  available          Boolean @default(true)
+  visibility         String  @default("public")
+  bio                String  @default("")
+  languages          String  @default("[]") // JSON
+  availability       String  @default("")
+  goals              String  @default("[]") // JSON
+  targetZones        String  @default("[]") // JSON
+  education          String  @default("")
+  experience         String  @default("[]") // JSON
+  stats              String  @default("[]") // JSON
+  videos             String  @default("[]") // JSON
+  references         String  @default("[]") // JSON
+  guardianId         String?
+  isMinor            Boolean @default(false)
+  suspended          Boolean @default(false)
+  wingspan           Float?
+  verticalReach      Float?
+  views              Int     @default(0)
+  videoViews         Int     @default(0)
+  ownerId            String? // compte utilisateur propriétaire du profil
+}
+
+model Organization {
+  id                 String  @id
+  name               String
+  type               String  @default("Club")
+  country            String  @default("Bénin")
+  city               String  @default("")
+  logoSeed           String  @default("")
+  image              String  @default("")
+  verified           Boolean @default(false)
+  verificationStatus String  @default("non vérifiée")
+  members            Int     @default(0)
+  playersCount       Int     @default(0)
+  founded            String  @default("")
+  description        String  @default("")
+  divisions          String  @default("[]") // JSON
+  achievements       String  @default("[]") // JSON
+  staff              String  @default("[]") // JSON
+  suspended          Boolean @default(false)
+  ownerId            String? // compte club propriétaire
+}
+
+model Opportunity {
+  id           String  @id
+  orgId        String
+  org          String
+  title        String
+  type         String  @default("")
+  country      String  @default("")
+  city         String  @default("")
+  position     String  @default("")
+  ageRange     String  @default("")
+  level        String  @default("")
+  deadline     String  @default("")
+  startDate    String  @default("")
+  status       String  @default("Ouverte")
+  description  String  @default("")
+  requirements String  @default("[]") // JSON
+  conditions   String  @default("[]") // JSON
+  slots        Int     @default(1)
+  applicants   Int     @default(0)
+  salary       String  @default("")
+  createdAt    String  @default("")
+}
+
+model Application {
+  id               String @id
+  playerId         String
+  playerName       String
+  opportunityId    String
+  opportunityTitle String
+  orgId            String
+  status           String @default("Nouveau")
+  updatedAt        String @default("")
+  motivation       String @default("")
+  history          String @default("[]") // JSON
+}
+
+model CourtEvent {
+  id           String  @id
+  title        String
+  kind         String  @default("Tournoi 3x3")
+  city         String  @default("")
+  country      String  @default("")
+  venue        String  @default("")
+  date         String  @default("")
+  endDate      String  @default("")
+  participants Int     @default(0)
+  capacity     Int     @default(0)
+  description  String  @default("")
+  program      String  @default("[]") // JSON
+  price        String  @default("Gratuit")
+  ageRange     String  @default("")
+  status       String  @default("Ouvert")
+  image        String  @default("")
+  results      String? // JSON
+  organizerId  String  @default("")
+  organizer    String  @default("")
+}
+
+model EventRegistration {
+  id         String  @id
+  eventId    String
+  eventTitle String
+  playerId   String
+  playerName String
+  status     String  @default("En attente")
+  registeredAt String @default("")
+  consent    Boolean @default(true)
+}
+
+model Conversation {
+  id               String  @id
+  participants     String  @default("[]") // JSON : ids utilisateurs
+  participantNames String  @default("[]") // JSON : noms affichés
+  subject          String  @default("")
+  messages         String  @default("[]") // JSON
+  unread           Boolean @default(false)
+  updatedAt        String  @default("")
+}
+
+model Notification {
+  id     String  @id
+  userId String
+  title  String
+  body   String  @default("")
+  time   String  @default("")
+  read   Boolean @default(false)
+  kind   String  @default("info")
+}
+
+model Verification {
+  id          String  @id
+  subject     String
+  subjectType String
+  subjectId   String  @default("")
+  status      String  @default("En attente")
+  submitted   String  @default("")
+  documents   String  @default("[]") // JSON
+  reviewer    String?
+  justification String?
+}
+
+model Report {
+  id        String  @id
+  subject   String
+  target    String
+  reason    String
+  details   String  @default("")
+  status    String  @default("À traiter")
+  priority  String  @default("Normale")
+  submitted String  @default("")
+  reporter  String  @default("")
+  action    String?
+}
+
+model Ticket {
+  id        String  @id
+  subject   String
+  requester String
+  topic     String  @default("")
+  status    String  @default("Ouvert")
+  priority  String  @default("Normale")
+  opened    String  @default("")
+  messages  String  @default("[]") // JSON
+}
+
+model Payment {
+  id      String @id
+  userId  String
+  user    String
+  plan    String
+  amount  String
+  method  String
+  status  String
+  date    String
+  invoice String
+}
+
+model Plan {
+  id          String  @id
+  name        String
+  audience    String  @default("")
+  price       Float   @default(0)
+  currency    String  @default("FCFA")
+  period      String  @default("mois")
+  features    String  @default("[]") // JSON
+  highlighted Boolean @default(false)
+  active      Boolean @default(true)
+}
+
+model AuditLog {
+  id     String @id
+  time   String
+  actor  String
+  action String
+  scope  String
+}
+
+model ScoutingReport {
+  id           String @id
+  playerId     String
+  playerName   String
+  scout        String
+  strengths    String @default("[]") // JSON
+  improvements String @default("[]") // JSON
+  confidence   String @default("Moyenne")
+  observations String @default("")
+  date         String @default("")
+  rating       Float  @default(0)
+}
+
+model SavedSearch {
+  id      String  @id
+  userId  String
+  name    String
+  query   String  @default("")
+  filters String  @default("{}") // JSON
+  alerts  Boolean @default(true)
+}
+
+model PrivateNote {
+  id         String @id
+  userId     String
+  targetId   String
+  targetName String
+  body       String
+  date       String @default("")
+  author     String @default("")
+}
+
+model ConsentRequest {
+  id         String @id
+  guardianId String
+  playerId   String
+  playerName String
+  requester  String
+  kind       String
+  status     String @default("En attente")
+  date       String @default("")
+}
+
+model Favorite {
+  userId   String
+  playerId String
+  @@id([userId, playerId])
+}
+
+model Follow {
+  userId String
+  orgId  String
+  @@id([userId, orgId])
+}
+
+model HiddenContent {
+  userId    String
+  contentId String
+  @@id([userId, contentId])
+}
+
+model SuspendedAccount {
+  accountId String @id
+  name      String @default("")
+}
+
+model PlatformSettings {
+  id                  String  @id @default("singleton")
+  brandName           String  @default("CourtLink")
+  tagline             String  @default("")
+  accentColor         String  @default("#ff6b35")
+  maintenance         Boolean @default(false)
+  newRegistrations    Boolean @default(true)
+  autoVerifyPlayers   Boolean @default(false)
+  maxFreeApplications Int     @default(5)
+  featuredSlots       Int     @default(6)
+}
