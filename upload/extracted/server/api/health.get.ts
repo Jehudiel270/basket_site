@@ -1,1 +1,0 @@
-export default defineEventHandler(() => ({ ok:true, service:'courtlink', integrations:{ neon:!!process.env.DATABASE_URL, neonAuth:!!process.env.NEON_AUTH_BASE_URL, cloudinary:!!process.env.CLOUDINARY_CLOUD_NAME }, timestamp:new Date().toISOString() }))

@@ -60,3 +60,6 @@ scripts/.e2e-*
 
 # Documents de livraison (hors repo — contiennent des références privées)
 download/
+
+# Zip et extraction d'origine (hors repo)
+upload/

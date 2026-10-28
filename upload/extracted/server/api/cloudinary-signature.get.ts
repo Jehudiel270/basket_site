@@ -1,2 +1,0 @@
-import crypto from 'node:crypto'
-export default defineEventHandler((event)=>{ const config=useRuntimeConfig(); const query=getQuery(event); const timestamp=String(query.timestamp||Math.floor(Date.now()/1000)); const folder='courtlink'; const signature=crypto.createHash('sha1').update(`folder=${folder}&timestamp=${timestamp}${config.cloudinaryApiSecret||''}`).digest('hex'); return { cloudName:config.public.cloudinaryCloudName, apiKey:config.cloudinaryApiKey||null, timestamp, folder, signature } })

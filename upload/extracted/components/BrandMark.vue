@@ -1,2 +1,0 @@
-<template><NuxtLink to="/" class="brand"><span class="brand-mark">C</span><span class="display">COURT<span class="orange">LINK</span></span></NuxtLink></template>
-<style scoped>.brand{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.08em;font-weight:700}.brand-mark{display:grid;place-items:center;width:30px;height:30px;border:2px solid #f97316;border-radius:50%;color:#f97316;font-family:'Space Grotesk';font-size:19px;font-weight:700}</style>
