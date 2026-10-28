@@ -90,7 +90,7 @@ export function AdminUsers() {
   const accounts = [
     ...demoAccounts.map(a => ({ id: a.role, name: a.name, role: a.role as Role, status: 'Actif', source: 'Compte démo' })),
     ...players.map(p => ({ id: p.id, name: p.name, role: 'player' as Role, status: suspendedAccounts.includes(p.id) || p.suspended ? 'Suspendu' : 'Actif', source: 'Joueur' })),
-    ...organizations.slice(0, 4).map(o => ({ id: o.id, name: o.name, role: 'club' as Role, status: suspendedAccounts.includes(o.id) || o.suspends ? 'Suspendu' : o.verified ? 'Actif · vérifié' : 'Actif · non vérifié', source: o.type })),
+    ...organizations.slice(0, 4).map(o => ({ id: o.id, name: o.name, role: 'club' as Role, status: suspendedAccounts.includes(o.id) || o.suspended ? 'Suspendu' : o.verified ? 'Actif · vérifié' : 'Actif · non vérifié', source: o.type })),
   ].filter(a => !q || a.name.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -149,7 +149,7 @@ export function AdminOrganizations() {
             </div>
             <div className="mt-3 flex gap-2">
               <button onClick={() => navigate(`/organisations/${o.id}`)} className="btn-ghosty flex-1 !py-1.5 text-xs">Page publique</button>
-              {(o.suspends || o.id === 'x') ? (
+              {(o.suspended || o.id === 'x') ? (
                 <button onClick={() => unsuspendAccount(o.id)} className="btn-ball flex-1 !py-1.5 text-xs">Réactiver</button>
               ) : (
                 <button onClick={() => { if (confirm(`Suspendre ${o.name} ?`)) suspendAccount(o.id, o.name); }} className="btn-ghosty flex-1 !py-1.5 text-xs !border-destructive/40 !text-destructive"><Ban size={12} /> Suspendre</button>

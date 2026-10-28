@@ -345,7 +345,7 @@ export const useCourtLink = create<CourtLinkStore>()(
       suspendAccount: (accountId, name) => {
         set(s => ({ suspendedAccounts: [...s.suspendedAccounts, accountId] }));
         if (accountId.startsWith('p')) set(s => ({ players: s.players.map(p => (p.id === accountId ? { ...p, suspended: true } : p)) }));
-        if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspends: true } : o)) }));
+        if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspended: true } : o)) }));
         toast(`Compte ${name} suspendu — l\u2019état est répercuté partout.`);
         get().addAudit(`Suspension du compte ${name} (${accountId})`, 'Administration');
       },
@@ -353,7 +353,7 @@ export const useCourtLink = create<CourtLinkStore>()(
       unsuspendAccount: (accountId) => {
         set(s => ({ suspendedAccounts: s.suspendedAccounts.filter(a => a !== accountId) }));
         if (accountId.startsWith('p')) set(s => ({ players: s.players.map(p => (p.id === accountId ? { ...p, suspended: false } : p)) }));
-        if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspends: false } : o)) }));
+        if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspended: false } : o)) }));
         toast.success('Compte réactivé.');
         get().addAudit(`Réactivation du compte ${accountId}`, 'Administration');
       },

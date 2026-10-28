@@ -54,7 +54,7 @@ export function OrgsDirectory() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={o.image} alt={o.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,12,0.9)] to-transparent" />
-                <div className="absolute left-3 top-3"><VerifiedBadge verified={o.verified && !o.suspends} className="backdrop-blur-sm" /></div>
+                <div className="absolute left-3 top-3"><VerifiedBadge verified={o.verified && !o.suspended} className="backdrop-blur-sm" /></div>
                 <div className="absolute bottom-3 left-3 right-3">
                   <h3 className="font-display text-lg font-bold text-white">{o.name}</h3>
                   <p className="text-xs text-white/70">{o.type} · {o.city}, {o.country} · depuis {o.founded}</p>
@@ -67,7 +67,7 @@ export function OrgsDirectory() {
                   <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {o.divisions.length} divisions</span>
                   {o.verificationStatus !== 'vérifiée' && <span className="text-[var(--amber-glow)]">{o.verificationStatus}</span>}
                 </div>
-                {o.suspends && <p className="mt-2 text-xs font-semibold text-destructive">Activité suspendue par l'administration.</p>}
+                {o.suspended && <p className="mt-2 text-xs font-semibold text-destructive">Activité suspendue par l'administration.</p>}
               </div>
             </article>
           ))}

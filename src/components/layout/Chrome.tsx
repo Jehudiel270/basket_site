@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { roleLabels } from '@/lib/permissions';
+import { useT, useLang } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function Logo({ onClick }: { onClick?: () => void }) {
@@ -25,13 +26,34 @@ export function Logo({ onClick }: { onClick?: () => void }) {
 }
 
 const NAV = [
-  { label: 'Joueurs', hash: '/joueurs' },
-  { label: 'Clubs & académies', hash: '/organisations' },
-  { label: 'Opportunités', hash: '/opportunites' },
-  { label: 'Événements', hash: '/evenements' },
-  { label: 'Tarifs', hash: '/tarifs' },
-  { label: 'Aide', hash: '/aide' },
+  { key: 'nav.players', hash: '/joueurs' },
+  { key: 'nav.clubs', hash: '/organisations' },
+  { key: 'nav.opportunities', hash: '/opportunites' },
+  { key: 'nav.events', hash: '/evenements' },
+  { key: 'nav.pricing', hash: '/tarifs' },
+  { key: 'nav.help', hash: '/aide' },
 ];
+
+export function LangToggle() {
+  const { lang, setLang } = useLang();
+  return (
+    <div className="flex h-9 items-center rounded-lg border border-border p-0.5" role="group" aria-label="Langue / Language">
+      {(['fr', 'en'] as const).map(l => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          aria-pressed={lang === l}
+          className={cn(
+            'h-7.5 rounded-md px-2 text-[11px] font-bold uppercase tracking-wider transition-colors',
+            lang === l ? 'bg-[var(--ball)] text-black' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -40,7 +62,7 @@ export function ThemeToggle() {
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-[var(--ball)] hover:text-[var(--ball)]"
-      aria-label="Changer de thème"
+      aria-label="Changer de thème / Switch theme"
     >
       {mounted && theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
     </button>
@@ -60,6 +82,7 @@ export function PublicHeader({ route }: { route: string }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { role, loggedIn, notifications, logout } = useCourtLink();
+  const t = useT();
   const unread = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
@@ -89,11 +112,12 @@ export function PublicHeader({ route }: { route: string }) {
                 route === n.hash ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
               )}
             >
-              {n.label}
+              {t(n.key)}
             </button>
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <LangToggle />
           <ThemeToggle />
           {loggedIn ? (
             <>
@@ -119,16 +143,16 @@ export function PublicHeader({ route }: { route: string }) {
               <button
                 onClick={() => { logout(); navigate('/'); }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:text-destructive"
-                aria-label="Se déconnecter"
+                aria-label="Se déconnecter / Log out"
               >
                 <LogOut size={15} />
               </button>
             </>
           ) : (
             <>
-              <button onClick={() => navigate('/connexion')} className="btn-ghosty hidden !py-2 text-xs sm:inline-flex">Connexion</button>
+              <button onClick={() => navigate('/connexion')} className="btn-ghosty hidden !py-2 text-xs sm:inline-flex">{t('header.login')}</button>
               <button onClick={() => navigate('/inscription')} className="btn-ball !py-2 text-xs">
-                Créer mon compte
+                {t('header.register')}
               </button>
             </>
           )}
@@ -146,7 +170,7 @@ export function PublicHeader({ route }: { route: string }) {
                 onClick={() => { navigate(n.hash); setOpen(false); }}
                 className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                {n.label}
+                {t(n.key)}
               </button>
             ))}
             {loggedIn && (
@@ -162,35 +186,36 @@ export function PublicHeader({ route }: { route: string }) {
 }
 
 export function PublicFooter() {
+  const t = useT();
   const cols: { title: string; links: { label: string; hash: string }[] }[] = [
     {
-      title: 'Découvrir',
+      title: t('footer.col.discover'),
       links: [
-        { label: 'Annuaire des joueurs', hash: '/joueurs' },
-        { label: 'Clubs & académies', hash: '/organisations' },
-        { label: 'Opportunités', hash: '/opportunites' },
-        { label: 'Événements', hash: '/evenements' },
-        { label: 'Tarifs', hash: '/tarifs' },
+        { label: t('footer.playersDir'), hash: '/joueurs' },
+        { label: t('nav.clubs'), hash: '/organisations' },
+        { label: t('nav.opportunities'), hash: '/opportunites' },
+        { label: t('nav.events'), hash: '/evenements' },
+        { label: t('nav.pricing'), hash: '/tarifs' },
       ],
     },
     {
-      title: 'Parcours',
+      title: t('footer.col.journeys'),
       links: [
-        { label: 'Pour les joueurs', hash: '/fonctionnement-joueurs' },
-        { label: 'Pour les clubs & recruteurs', hash: '/fonctionnement-clubs' },
-        { label: 'Créer un compte', hash: '/inscription' },
-        { label: 'Centre d\u2019aide', hash: '/aide' },
-        { label: 'Contact', hash: '/contact' },
+        { label: t('footer.howPlayers'), hash: '/fonctionnement-joueurs' },
+        { label: t('footer.howClubs'), hash: '/fonctionnement-clubs' },
+        { label: t('footer.register'), hash: '/inscription' },
+        { label: t('footer.helpCenter'), hash: '/aide' },
+        { label: t('footer.contact'), hash: '/contact' },
       ],
     },
     {
-      title: 'Confiance & sécurité',
+      title: t('footer.col.trust'),
       links: [
-        { label: 'Politique de confidentialité', hash: '/confidentialite' },
-        { label: 'Conditions d\u2019utilisation', hash: '/conditions' },
-        { label: 'Signaler un contenu', hash: '/signaler' },
-        { label: 'Vérification des comptes', hash: '/aide' },
-        { label: 'Protection des mineurs', hash: '/confidentialite' },
+        { label: t('footer.privacy'), hash: '/confidentialite' },
+        { label: t('footer.terms'), hash: '/conditions' },
+        { label: t('footer.report'), hash: '/signaler' },
+        { label: t('footer.verify'), hash: '/aide' },
+        { label: t('footer.minors'), hash: '/confidentialite' },
       ],
     },
   ];
@@ -201,15 +226,15 @@ export function PublicFooter() {
           <div>
             <Logo />
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              La plateforme qui connecte les talents du basketball aux clubs, académies et recruteurs d\u2019Afrique de l\u2019Ouest — avec des données vérifiées et des parcours transparents.
+              {t('footer.tagline')}
             </p>
             <div className="mt-5 flex gap-2">
-              {['FCFA supporté', 'FR / EN bientôt', 'Mobile first'].map(t => (
-                <span key={t} className="chip border-border bg-card text-muted-foreground">{t}</span>
+              {['footer.chip.fcfa', 'footer.chip.lang', 'footer.chip.mobile'].map(k => (
+                <span key={k} className="chip border-border bg-card text-muted-foreground">{t(k)}</span>
               ))}
             </div>
             <p className="mt-5 max-w-xs text-[11px] leading-relaxed text-muted-foreground/70">
-              CourtLink facilite la découverte et la mise en relation. La plateforme ne garantit aucune sélection, bourse, contrat ou rémunération et n\u2019est pas un agent licencié.
+              {t('footer.disclaimer')}
             </p>
           </div>
           {cols.map(c => (
@@ -228,10 +253,10 @@ export function PublicFooter() {
           ))}
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
-          <p>© 2026 CourtLink (prototype de démonstration) — Cotonou, Bénin. Aucune transaction réelle.</p>
+          <p>{t('footer.copyright')}</p>
           <p className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[var(--ball)] pulse-glow" />
-            Mode démonstration actif — données fictives
+            {t('footer.demoActive')}
           </p>
         </div>
       </div>

@@ -20,6 +20,11 @@ export const roleIcons: Record<Role, string> = {
 export interface MenuEntry { label: string; hash: string; icon: string; badge?: 'unread' | 'queue' }
 
 export const roleMenus: Record<Role, MenuEntry[]> = {
+  visitor: [
+    { label: 'Accueil', hash: '#/', icon: 'Globe' },
+    { label: 'Joueurs', hash: '#/joueurs', icon: 'UserRound' },
+    { label: 'Opportunités', hash: '#/opportunites', icon: 'Target' },
+  ],
   player: [
     { label: 'Vue d\u2019ensemble', hash: '#/app', icon: 'LayoutDashboard' },
     { label: 'Mon profil sportif', hash: '#/app/profil', icon: 'UserRound' },

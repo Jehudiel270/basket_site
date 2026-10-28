@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { ArrowRight, Play, ShieldCheck, MapPin, Users, RotateCcw, Zap } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { useT } from '@/lib/i18n';
 
 const CourtScene = dynamic(() => import('@/components/three/CourtScene'), {
   ssr: false,
@@ -12,7 +13,7 @@ const CourtScene = dynamic(() => import('@/components/three/CourtScene'), {
     <div className="flex h-full w-full items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="ball-loader" style={{ width: 22, height: 22 }} />
-        <span className="font-score text-xs text-muted-foreground">CHARGEMENT DE L&apos;ARÈNE 3D…</span>
+        <span className="font-score text-xs text-muted-foreground">CHARGEMENT DE L&apos;ARÈNE / LOADING ARENA…</span>
       </div>
     </div>
   ),
@@ -31,6 +32,7 @@ function LED({ label, value, size = 'text-3xl' }: { label: string; value: string
 
 export function Hero({ featured }: { featured: number }) {
   const { settings } = useCourtLink();
+  const t = useT();
   const [score, setScore] = useState(0);
   const [shots, setShots] = useState(0);
   const [made, setMade] = useState(0);
@@ -51,7 +53,7 @@ export function Hero({ featured }: { featured: number }) {
   const onMiss = () => {
     setShots(s => s + 1);
     setStreak(0);
-    setPop({ id: Date.now(), text: 'RATÉ !', good: false });
+    setPop({ id: Date.now(), text: t('hero.pop.miss'), good: false });
   };
 
   const shoot = () => {
@@ -81,28 +83,28 @@ export function Hero({ featured }: { featured: number }) {
         <div className="max-w-xl md:bg-transparent">
           <div className="pointer-events-auto fade-up mb-5 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklch,var(--ball)_40%,transparent)] bg-[color-mix(in_oklch,var(--ball)_12%,transparent)] px-3 py-1.5 text-xs font-semibold text-[var(--ball)] backdrop-blur-md">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ball)]" />
-            Le réseau de confiance du basketball · Bénin & Afrique de l&apos;Ouest
+            {t('hero.badge')}
           </div>
           <h1 className="fade-up font-display text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]" style={{ animationDelay: '.08s' }}>
-            Le talent local
+            {t('hero.title1')}
             <br />
-            <span className="text-gradient-ball">entre dans le panier.</span>
+            <span className="text-gradient-ball">{t('hero.title2')}</span>
           </h1>
           <p className="fade-up mt-5 max-w-md text-base leading-relaxed text-muted-foreground md:text-lg [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]" style={{ animationDelay: '.16s' }}>
-            {settings.tagline}. Profils vérifiés, statistiques par saison, opportunités régionales et suivi de recrutement — du premier camp de détection au contrat.
+            {settings.tagline}. {t('hero.sub')}
           </p>
           <div className="fade-up pointer-events-auto mt-8 flex flex-wrap gap-3" style={{ animationDelay: '.24s' }}>
             <button onClick={() => navigate('/joueurs')} className="btn-ball !px-6 !py-3 text-base">
-              Explorer les profils <ArrowRight size={17} />
+              {t('hero.cta.explore')} <ArrowRight size={17} />
             </button>
             <button onClick={() => navigate('/inscription')} className="btn-ghosty !px-6 !py-3 text-base">
-              <Play size={16} /> Je suis joueur — créer mon profil
+              <Play size={16} /> {t('hero.cta.createProfile')}
             </button>
           </div>
           <div className="fade-up mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground" style={{ animationDelay: '.32s' }}>
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-[var(--ball)]" /> Profils & clubs vérifiés</span>
-            <span className="inline-flex items-center gap-1.5"><Users size={14} className="text-[var(--ball)]" /> {featured}+ joueurs référencés</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin size={14} className="text-[var(--ball)]" /> 10 pays couverts</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-[var(--ball)]" /> {t('hero.trust.verified')}</span>
+            <span className="inline-flex items-center gap-1.5"><Users size={14} className="text-[var(--ball)]" /> {featured}+ {t('hero.trust.players')}</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin size={14} className="text-[var(--ball)]" /> {t('hero.trust.countries')}</span>
           </div>
         </div>
       </div>
@@ -117,16 +119,16 @@ export function Hero({ featured }: { featured: number }) {
             </span>
           </div>
           <div className="flex items-end gap-6">
-            <LED label="Score" value={String(score).padStart(2, '0')} size="text-4xl md:text-5xl" />
+            <LED label={t('hero.score')} value={String(score).padStart(2, '0')} size="text-4xl md:text-5xl" />
             <div className="flex gap-4 pb-1">
-              <LED label="Tirs" value={String(shots).padStart(2, '0')} size="text-base" />
-              <LED label="Paniers" value={String(made).padStart(2, '0')} size="text-base" />
-              <LED label="Série" value={'x' + streak} size="text-base" />
+              <LED label={t('hero.shots')} value={String(shots).padStart(2, '0')} size="text-base" />
+              <LED label={t('hero.made')} value={String(made).padStart(2, '0')} size="text-base" />
+              <LED label={t('hero.streak')} value={'x' + streak} size="text-base" />
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
             <button onClick={shoot} className="btn-ball flex-1 !rounded-lg !py-2 text-xs uppercase tracking-wider">
-              <Zap size={13} /> Tirer
+              <Zap size={13} /> {t('hero.shoot')}
             </button>
             <button
               onClick={() => setAuto(a => !a)}
@@ -138,12 +140,12 @@ export function Hero({ featured }: { featured: number }) {
             <button
               onClick={() => { setScore(0); setShots(0); setMade(0); setStreak(0); }}
               className="rounded-lg border border-white/15 px-2.5 py-2 text-white/50 transition-colors hover:text-white"
-              aria-label="Remettre le score à zéro"
+              aria-label={t('hero.reset')}
             >
               <RotateCcw size={12} />
             </button>
           </div>
-          <p className="mt-2 text-center text-[9px] text-white/35">Cliquez le ballon pour marquer</p>
+          <p className="mt-2 text-center text-[9px] text-white/35">{t('hero.clickHint')}</p>
         </div>
       </div>
 
@@ -165,7 +167,7 @@ export function Hero({ featured }: { featured: number }) {
 
       {/* Indicateur scroll */}
       <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 text-muted-foreground/60 md:flex">
-        <span className="text-[10px] uppercase tracking-[0.25em]">Défiler</span>
+        <span className="text-[10px] uppercase tracking-[0.25em]">{t('hero.scroll')}</span>
         <div className="h-8 w-[1px] bg-gradient-to-b from-[var(--ball)] to-transparent" />
       </div>
     </section>

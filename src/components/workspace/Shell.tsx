@@ -80,7 +80,7 @@ export function WorkspaceShell({ route, children }: { route: string; children: R
         </div>
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Menu du rôle">
           {menu.map(m => {
-            const Icon = (icons as Record<string, icons.LucideIcon>)[m.icon] ?? icons.Circle;
+            const Icon = (icons as unknown as Record<string, icons.LucideIcon>)[m.icon] ?? icons.Circle;
             const target = m.hash.replace('#', '');
             const active = route === target || (target !== '/app' && target !== '/admin' && route.startsWith(target));
             return (
@@ -92,7 +92,7 @@ export function WorkspaceShell({ route, children }: { route: string; children: R
                 <Icon size={16} />
                 <span className="flex-1 text-left">{m.label}</span>
                 {m.badge === 'unread' && unread > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--ball)] px-1 text-[9px] font-bold text-black tnum">{unread}</span>}
-                {m.badge === 'queue' && (route === '' ) && <span className="h-1.5 w-1.5 rounded-full bg-[var(--ball)]" />}
+                {m.badge === 'queue' && route !== target && <span className="h-1.5 w-1.5 rounded-full bg-[var(--ball)]" />}
               </button>
             );
           })}

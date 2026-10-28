@@ -106,7 +106,7 @@ export function PlayerCard({ player, compare, onCompare, index = 0 }: { player: 
   );
 }
 
-export function EmptyState({ icon: Icon = 'Basketball', title, hint, action }: { icon?: never; title: string; hint?: string; action?: React.ReactNode }) {
+export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 px-6 py-14 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--ball)_15%,transparent)]">

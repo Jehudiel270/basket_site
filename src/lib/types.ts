@@ -51,7 +51,7 @@ export interface Player {
   weight: number;
   position: string;
   secondaryPositions: string[];
-  dominantHand: 'Droitier' | 'Gaucher';
+  dominantHand: 'Droitier' | 'Gaucher' | 'Gauchère';
   club: string;
   number: number;
   rating: number;
@@ -94,7 +94,7 @@ export interface Organization {
   divisions: string[];
   achievements: string[];
   staff: { name: string; role: string; license: string }[];
-  suspends?: boolean;
+  suspended?: boolean;
 }
 
 export interface Opportunity {

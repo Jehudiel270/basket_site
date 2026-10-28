@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { useT } from '@/lib/i18n';
 import { PlayerCard, SectionHead } from '@/components/common/Bits';
 import { POSITIONS, COUNTRIES } from '@/lib/demo-data';
 import { cn } from '@/lib/utils';
@@ -75,6 +76,7 @@ export function Marquee() {
 
 /* ── Moteur de découverte ── */
 export function DiscoveryBar() {
+  const t = useT();
   const [position, setPosition] = useState('Tous les postes');
   const [country, setCountry] = useState('Tous les pays');
   const [query, setQuery] = useState('');
@@ -86,7 +88,7 @@ export function DiscoveryBar() {
     <Reveal>
       <div className="mx-auto -mt-10 max-w-4xl rounded-2xl border border-border bg-card/90 p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] backdrop-blur-xl md:p-5">
         <p className="mb-3 flex items-center gap-2 font-display text-sm font-bold">
-          <Sparkles size={15} className="text-[var(--ball)]" /> Trouvez votre futur joueur ou votre futur club
+          <Sparkles size={15} className="text-[var(--ball)]" /> {t('discover.title')}
         </p>
         <div className="grid gap-2.5 md:grid-cols-[1.4fr_1fr_1fr_auto]">
           <div className="relative">
@@ -95,19 +97,19 @@ export function DiscoveryBar() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && go()}
-              placeholder="Nom, ville, club…"
+              placeholder={t('discover.placeholder')}
               className="h-11 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none transition-colors focus:border-[var(--ball)]"
             />
           </div>
-          <select value={position} onChange={e => setPosition(e.target.value)} className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" aria-label="Poste">
-            <option>Tous les postes</option>
+          <select value={position} onChange={e => setPosition(e.target.value)} className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" aria-label={t('discover.position')}>
+            <option>{t('discover.allPositions')}</option>
             {POSITIONS.map(p => <option key={p}>{p}</option>)}
           </select>
-          <select value={country} onChange={e => setCountry(e.target.value)} className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" aria-label="Pays">
-            <option>Tous les pays</option>
+          <select value={country} onChange={e => setCountry(e.target.value)} className="h-11 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" aria-label={t('discover.country')}>
+            <option>{t('discover.allCountries')}</option>
             {COUNTRIES.map(c => <option key={c}>{c}</option>)}
           </select>
-          <button onClick={go} className="btn-ball h-11">Rechercher</button>
+          <button onClick={go} className="btn-ball h-11">{t('discover.search')}</button>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {['Pivots U21', 'Meneuses rapides', 'Shooters 3P', 'Ailiers défensifs'].map(t => (
@@ -124,11 +126,12 @@ export function DiscoveryBar() {
 
 /* ── Bandeau de chiffres ── */
 export function StatsBand() {
+  const t = useT();
   const items = [
-    { icon: User, to: 1240, suffix: '', label: 'Joueurs inscrits' },
-    { icon: Building2, to: 86, suffix: '', label: 'Clubs & académies' },
-    { icon: Target, to: 312, suffix: '', label: 'Opportunités publiées' },
-    { icon: MapPin, to: 10, suffix: '', label: 'Pays couverts' },
+    { icon: User, to: 1240, suffix: '', label: t('stats.registered') },
+    { icon: Building2, to: 86, suffix: '', label: t('stats.clubs') },
+    { icon: Target, to: 312, suffix: '', label: t('stats.opportunities') },
+    { icon: MapPin, to: 10, suffix: '', label: t('stats.countries') },
   ];
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
@@ -153,16 +156,17 @@ export function StatsBand() {
 
 /* ── Joueurs en vedette ── */
 export function FeaturedPlayers() {
+  const t = useT();
   const { players } = useCourtLink();
   const featured = [...players].sort((a, b) => b.rating - a.rating).slice(0, 4);
   return (
     <section className="mx-auto max-w-7xl px-4 pb-8 md:px-6">
       <Reveal>
         <SectionHead
-          eyebrow="Scouting du moment"
-          title="Les profils en vedette"
-          sub="Sélection éditoriale basée sur l'indice CourtLink : statistiques vérifiées, vidéos complètes et disponibilité actuelle."
-          right={<button onClick={() => navigate('/joueurs')} className="btn-ghosty">Tout l'annuaire <ArrowUpRight size={15} /></button>}
+          eyebrow={t('featured.eyebrow')}
+          title={t('featured.title')}
+          sub={t('featured.sub')}
+          right={<button onClick={() => navigate('/joueurs')} className="btn-ghosty">{t('featured.all')} <ArrowUpRight size={15} /></button>}
         />
       </Reveal>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,6 +182,7 @@ export function FeaturedPlayers() {
 
 /* ── Opportunités récentes ── */
 export function RecentOpportunities() {
+  const t = useT();
   const { opportunities } = useCourtLink();
   const open = opportunities.filter(o => o.status === 'Ouverte').slice(0, 3);
   return (
@@ -185,10 +190,10 @@ export function RecentOpportunities() {
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <Reveal>
           <SectionHead
-            eyebrow="Bouche à oreille numérique"
-            title="Opportunités ouvertes cette semaine"
-            sub="Contrats saison, camps de détection, bourses académiques : chaque annonce indique critères, conditions et date limite."
-            right={<button onClick={() => navigate('/opportunites')} className="btn-ghosty">Toutes les opportunités <ArrowUpRight size={15} /></button>}
+            eyebrow={t('opps.eyebrow')}
+            title={t('opps.title')}
+            sub={t('opps.sub')}
+            right={<button onClick={() => navigate('/opportunites')} className="btn-ghosty">{t('opps.all')} <ArrowUpRight size={15} /></button>}
           />
         </Reveal>
         <div className="grid gap-5 md:grid-cols-3">
@@ -206,7 +211,7 @@ export function RecentOpportunities() {
                 <p className="mt-1.5 text-sm text-muted-foreground">{o.org} · {o.city}, {o.country}</p>
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                   <span>{o.position} · {o.ageRange}</span>
-                  <span className="tnum">{o.applicants} candidats</span>
+                  <span className="tnum">{o.applicants} {t('opps.candidates')}</span>
                 </div>
               </button>
             </Reveal>
@@ -219,24 +224,25 @@ export function RecentOpportunities() {
 
 /* ── Comment ça marche ── */
 export function HowItWorks() {
+  const t = useT();
   const cols = [
     {
-      icon: User, title: 'Pour les joueurs', hash: '/fonctionnement-joueurs',
-      steps: ['Créez votre profil sportif complet', 'Ajoutez stats par saison et vidéos', 'Choisissez votre visibilité', 'Postulez et suivez vos candidatures'],
+      icon: User, title: t('how.players'), hash: '/fonctionnement-joueurs',
+      steps: [t('how.step.p1'), t('how.step.p2'), t('how.step.p3'), t('how.step.p4')],
     },
     {
-      icon: Radar, title: 'Pour les clubs & recruteurs', hash: '/fonctionnement-clubs',
-      steps: ['Faites vérifier votre structure', 'Publiez des opportunités claires', 'Filtrez et comparez les profils', 'Gérez votre pipeline de recrutement'],
+      icon: Radar, title: t('how.clubs'), hash: '/fonctionnement-clubs',
+      steps: [t('how.step.c1'), t('how.step.c2'), t('how.step.c3'), t('how.step.c4')],
     },
     {
-      icon: CalendarDays, title: 'Pour les organisateurs', hash: '/inscription',
-      steps: ['Créez combines, showcases et tournois', 'Gérez inscriptions et présences', 'Publiez les résultats et stats', 'Donnez de la visibilité aux talents'],
+      icon: CalendarDays, title: t('how.organizers'), hash: '/inscription',
+      steps: [t('how.step.o1'), t('how.step.o2'), t('how.step.o3'), t('how.step.o4')],
     },
   ];
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
       <Reveal>
-        <SectionHead eyebrow="Le fonctionnement" title="Trois parcours, un même terrain" sub="Chaque rôle dispose de son espace de travail avec des outils conçus pour le basketball ouest-africain." />
+        <SectionHead eyebrow={t('how.eyebrow')} title={t('how.title')} sub={t('how.sub')} />
       </Reveal>
       <div className="grid gap-5 md:grid-cols-3">
         {cols.map((c, i) => (
@@ -254,7 +260,7 @@ export function HowItWorks() {
                 ))}
               </ol>
               <button onClick={() => navigate(c.hash)} className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-[var(--ball)] hover:gap-2 transition-all">
-                Découvrir le parcours <ArrowRight size={15} />
+                {t('how.discover')} <ArrowRight size={15} />
               </button>
             </div>
           </Reveal>
@@ -265,25 +271,27 @@ export function HowItWorks() {
 }
 
 /* ── Rôles ── */
+/* Les libellés passent par le dictionnaire i18n */
 const ROLES = [
-  { icon: User, label: 'Joueur', desc: 'Profil sportif, stats, vidéos, candidatures' },
-  { icon: HeartHandshake, label: 'Parent / tuteur', desc: 'Consentements et protection des mineurs' },
-  { icon: Building2, label: 'Club / académie', desc: 'Pipeline, effectifs, opportunités' },
-  { icon: Radar, label: 'Recruteur / scout', desc: 'Recherche avancée, rapports, favoris' },
-  { icon: CalendarDays, label: 'Organisateur', desc: 'Événements, inscriptions, résultats' },
-  { icon: ShieldCheck, label: 'Modérateur', desc: 'Vérifications et modération' },
-  { icon: Headset, label: 'Support', desc: 'Tickets, paiements, litiges' },
-  { icon: Crown, label: 'Administrateur', desc: 'Pilotage complet de la plateforme' },
+  { icon: User, label: 'role.player', desc: 'role.player.desc' },
+  { icon: HeartHandshake, label: 'role.guardian', desc: 'role.guardian.desc' },
+  { icon: Building2, label: 'role.club', desc: 'role.club.desc' },
+  { icon: Radar, label: 'role.scout', desc: 'role.scout.desc' },
+  { icon: CalendarDays, label: 'role.organizer', desc: 'role.organizer.desc' },
+  { icon: ShieldCheck, label: 'role.moderator', desc: 'role.moderator.desc' },
+  { icon: Headset, label: 'role.support', desc: 'role.support.desc' },
+  { icon: Crown, label: 'role.admin', desc: 'role.admin.desc' },
 ];
 export function RolesGrid() {
+  const t = useT();
   return (
     <section className="border-y border-border bg-[var(--court)]/60 py-16">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <Reveal>
           <SectionHead
-            eyebrow="8 rôles métier"
-            title="Un espace de travail pour chaque maillon du recrutement"
-            sub="Testez chaque rôle depuis la page de connexion : le menu, les pages et les permissions s'adaptent automatiquement."
+            eyebrow={t('roles.eyebrow')}
+            title={t('roles.title')}
+            sub={t('roles.sub')}
           />
         </Reveal>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -291,8 +299,8 @@ export function RolesGrid() {
             <Reveal key={r.label} delay={(i % 4) * 70}>
               <button onClick={() => navigate('/connexion')} className="card-court group w-full p-5 text-left">
                 <r.icon size={20} className="mb-3 text-[var(--ball)] transition-transform group-hover:scale-110" />
-                <h3 className="font-display text-sm font-bold">{r.label}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{r.desc}</p>
+                <h3 className="font-display text-sm font-bold">{t(r.label)}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{t(r.desc)}</p>
               </button>
             </Reveal>
           ))}
@@ -304,6 +312,7 @@ export function RolesGrid() {
 
 /* ── Témoignages ── */
 export function Testimonials() {
+  const t = useT();
   const quotes = [
     { text: 'En trois semaines, nous avons reçu des candidatures de pivots vérifiés de trois pays. Le pipeline nous a fait gagner un temps fou.', name: 'Arnaud Koffi', role: 'Coach principal · Cotonou Hoopers' },
     { text: 'Mon profil dit exactement ce que je suis : mes stats, mes vidéos, ma scolarité. Un club de Lomé m\u2019a contactée directement.', name: 'Nadège Agbodjan', role: 'Arrière · Lomé Stars' },
@@ -312,7 +321,7 @@ export function Testimonials() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
       <Reveal>
-        <SectionHead eyebrow="Ils l'utilisent" title="Ce que dit le terrain" />
+        <SectionHead eyebrow={t('testi.eyebrow')} title={t('testi.title')} />
       </Reveal>
       <div className="grid gap-5 md:grid-cols-3">
         {quotes.map((q, i) => (
@@ -340,27 +349,28 @@ export function Testimonials() {
 
 /* ── Aperçu tarifs ── */
 export function PricingTeaser() {
+  const t = useT();
   const { plans } = useCourtLink();
   const three = plans.filter(p => ['premium', 'clubpro', 'academy'].includes(p.id));
   return (
     <section className="mx-auto max-w-7xl px-4 pb-16 md:px-6">
       <Reveal>
         <SectionHead
-          eyebrow="Tarifs transparents"
-          title="Commencez gratuitement, évoluez quand ça compte"
-          sub="Prix en FCFA, configurables par l'administration. Les abonnements achètent des fonctionnalités — jamais une promesse de sélection."
-          right={<button onClick={() => navigate('/tarifs')} className="btn-ghosty">Comparer les offres <ArrowUpRight size={15} /></button>}
+          eyebrow={t('pricing.eyebrow')}
+          title={t('pricing.title')}
+          sub={t('pricing.sub')}
+          right={<button onClick={() => navigate('/tarifs')} className="btn-ghosty">{t('pricing.compare')} <ArrowUpRight size={15} /></button>}
         />
       </Reveal>
       <div className="grid gap-5 md:grid-cols-3">
         {three.map((p, i) => (
           <Reveal key={p.id} delay={i * 100}>
             <div className={cn('card-court h-full p-6', p.highlighted && 'border-[var(--ball)]/50 shadow-[0_16px_50px_-16px_color-mix(in_oklch,var(--ball)_35%,transparent)]')}>
-              {p.highlighted && <span className="chip mb-3 border-[var(--ball)] bg-[var(--ball)] text-black">Le plus choisi</span>}
+              {p.highlighted && <span className="chip mb-3 border-[var(--ball)] bg-[var(--ball)] text-black">{t('pricing.mostChosen')}</span>}
               <h3 className="font-display text-lg font-bold">{p.name}</h3>
               <p className="text-xs text-muted-foreground">{p.audience}</p>
               <p className="mt-4 font-display text-3xl font-black tnum">
-                {p.price === 0 ? 'Gratuit' : `${p.price.toLocaleString('fr-FR')} F`}
+                {p.price === 0 ? t('pricing.free') : `${p.price.toLocaleString('fr-FR')} F`}
                 {p.price > 0 && <span className="text-sm font-medium text-muted-foreground"> /{p.period}</span>}
               </p>
               <ul className="mt-4 space-y-2">
@@ -378,6 +388,7 @@ export function PricingTeaser() {
 
 /* ── CTA finale ── */
 export function CTASection() {
+  const t = useT();
   return (
     <section className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl px-4 pb-20 md:px-6">
       <Reveal>
@@ -388,24 +399,24 @@ export function CTASection() {
           <div className="relative z-10 grid gap-8 p-8 md:grid-cols-2 md:p-14">
             <div>
               <h2 className="font-display text-3xl font-black leading-tight text-white md:text-4xl">
-                Votre saison prochaine
-                <br /><span className="text-gradient-ball">commence sur ce profil.</span>
+                {t('cta.title1')}
+                <br /><span className="text-gradient-ball">{t('cta.title2')}</span>
               </h2>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
-                Que vous soyez joueur en quête de visibilité ou recruteur à la recherche du bon profil, le meilleur moment pour rejoindre le réseau, c'est avant la prochaine fenêtre de recrutement.
+                {t('cta.sub')}
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <button onClick={() => navigate('/inscription')} className="btn-ball !px-6 !py-3">Créer mon compte gratuit <ArrowRight size={16} /></button>
+                <button onClick={() => navigate('/inscription')} className="btn-ball !px-6 !py-3">{t('cta.register')} <ArrowRight size={16} /></button>
                 <button onClick={() => navigate('/demo')} className="btn-ghosty border-white/25 text-white hover:!text-[var(--ball)]">
-                  <Play size={15} /> Tester les comptes démo
+                  <Play size={15} /> {t('cta.demo')}
                 </button>
               </div>
             </div>
             <div className="grid content-center gap-3">
               {[
-                { icon: ShieldCheck, t: 'Vérification documentaire', d: 'Joueurs, clubs et scouts justificatifs à l\u2019appui' },
-                { icon: Trophy, t: 'Historique de saison complet', d: 'Points, rebonds, passes, % de tir par compétition' },
-                { icon: Users, t: 'Zéro contact non sollicité', d: 'Consentement obligatoire pour les mineurs' },
+                { icon: ShieldCheck, t: t('cta.trust1.t'), d: t('cta.trust1.d') },
+                { icon: Trophy, t: t('cta.trust2.t'), d: t('cta.trust2.d') },
+                { icon: Users, t: t('cta.trust3.t'), d: t('cta.trust3.d') },
               ].map(x => (
                 <div key={x.t} className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm">
                   <x.icon size={18} className="mt-0.5 shrink-0 text-[var(--ball)]" />
