@@ -172,7 +172,15 @@ admin@demo.courtlink · semevo@ · tuteur@ · club@ · scout@ · events@ · mode
 + admin réel : admin@courtlink.bj (mot de passe `courtlink-admin-2026`, à changer via ADMIN_PASSWORD au seed)
 
 ### Restant pour la mise en ligne
-1. Clés Neon (DATABASE_URL) et Cloudinary (3 valeurs) → voir `COURTLINK-CLES.md`
-2. Déploiement Vercel (variables d'env à copier)
+1. ~~Clés Neon (DATABASE_URL) et Cloudinary (3 valeurs)~~ → **reçues et branchées** (voir `COURTLINK-CLES.md`)
+2. Push du repo GitHub (PAT demandé) puis déploiement Vercel (variables d'env listées dans `COURTLINK-CLES.md`)
 3. Paiements réels (restent simulés — aucun encaissement) et réinitialisation de mot de passe
    volontairement hors périmètre (« pas mail »).
+
+### Branchement effectué (29 oct 2026)
+- Neon connecté : 24 tables poussées + seed complet (9 comptes, 24 joueurs, 8 organisations, 10 opportunités, 5 événements, 7 candidatures)
+- Cloudinary branché : signature + upload réel vérifié (`courtlink/photos/…`)
+- E2E API 16/16 : auth (login/register/409), snapshot `/api/state` depuis Neon, mutations persistées et relues en base, sécurité (401 sans session, 400 payload invalide, 403 ownership)
+- `.env` retiré du suivi git (aucune clé dans l'historique — vérifié par recherche `git log -S`)
+- Scripts d'exploitation dans `scripts/` : `real-env.sh` (charge la vraie env malgré le sandbox), `ensure-server.sh`, `verify-db.ts`, `e2e-real.sh`, `get-player-id.ts`, `check-player.ts`, `cleanup-e2e.ts`
+- Détail : URL Neon avec `sslmode=require&pgbouncer=true` (`channel_binding=require` non supporté par le parseur Prisma)

@@ -1,72 +1,71 @@
-# CourtLink — Clés à fournir pour le lancement réel
+# CourtLink — Branchement réel : FAIT ✅
 
-Le code serveur est **prêt et testé** : authentification réelle, base de données,
-bus d'actions sécurisé, upload média. Il ne manque que **2 jeux de clés**.
+Les 2 jeux de clés ont été reçus et **tout est branché, semé et testé en conditions réelles**.
+Ce document remplace la liste « clés à fournir » — il reste le **push du repo** et le **déploiement Vercel**.
 
 ---
 
-## 1. Neon — la vraie base de données (obligatoire)
+## 1. Ce qui a été fait (29 oct 2026)
 
-1. Créer un compte gratuit sur **https://neon.tech** (aucune carte bancaire).
-2. Créer un projet (ex. `courtlink`) — région suggérée : `Europe (Frankfurt)`.
-3. Ouvrir **Dashboard → Connection Details** et copier la **pooled connection string**.
-   Elle ressemble à :
-   ```
-   postgresql://courtlink_user:xxxxxxxx@ep-xxxx-xxxx-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require
-   ```
-   ⚠️ Prendre celle marquée **« pooled »** (avec `-pooler` dans le nom d'hôte) —
-   c'est la bonne pour Next.js/Vercel.
-
-**À m'envoyer :** cette chaîne complète `postgresql://…`.
-
-## 2. Cloudinary — upload photos & vidéos (obligatoire)
-
-1. Créer un compte gratuit sur **https://cloudinary.com** (aucune carte bancaire).
-2. Dashboard → **Settings → Access Keys** (ou la page d'accueil du dashboard).
-3. Récupérer les 3 valeurs :
-   - `Cloud name`
-   - `API Key`
-   - `API Secret`
-
-**À m'envoyer :** ces 3 valeurs.
-
-📌 **Dossier « courtlink »** : c'est déjà géré dans le code — chaque upload
-(foto/vidéo/document) est signé côté serveur avec le dossier `courtlink/photos`,
-`courtlink/videos` ou `courtlink/documents`. Après le premier upload, le dossier
-apparaît dans la **Media Library**. Si vous voulez le voir tout de suite :
-Media Library → « Create folder » → nommer `courtlink` (facultatif).
-
-## 3. Ce que je génère moi-même (rien à fournir)
-
-| Variable | Rôle | Statut |
-|---|---|---|
-| `NEXTAUTH_SECRET` | Signature des sessions | ✅ déjà généré dans `.env` |
-| `NEXTAUTH_URL` | URL publique | `http://localhost:3000` ici, à changer sur Vercel |
-| `DATABASE_URL` local | Sandbox (SQLite) | ✅ déjà configuré et seedé |
-
-## 4. Ce que je ferai à réception des clés (≈ 10 minutes)
-
-1. Écrire les clés dans `.env` (jamais commité — `.gitignore` ligne 34).
-2. `prisma db push` → création des 24 tables dans Neon.
-3. `bun prisma/seed.ts` → admin réel + plans (+ comptes démo si vous voulez).
-4. Vérification E2E complète sur la vraie base (inscription, connexion, pipeline, upload).
-5. Guide Vercel : `vercel` → ajouter les mêmes variables d'environnement → déployer.
-
-## 5. Sécurité des clés
-
-- Elles transitent uniquement par cette conversation et finissent dans `.env`
-  (jamais dans le code ni le dépôt git).
-- Après mise en ligne, vous pourrez **faire tourner** les clés Cloudinary et
-  Neon depuis leurs dashboards respectifs (Rotate/Reset) pour plus de sûreté.
-
-## 6. État actuel du mode réel (déjà vérifié en sandbox)
-
-| Test | Résultat |
+| Étape | Résultat |
 |---|---|
-| Inscription réelle (email + mot de passe bcrypt) | ✅ compte + profil créés en base |
-| Connexion (session JWT signée) | ✅ |
-| Modification de profil → écriture en base | ✅ |
-| Pipeline de recrutement → statut + historique en base | ✅ |
-| Protections : 401 sans session, 409 doublon, 400 validation | ✅ |
-| Upload Cloudinary | 🟡 prêt — attend les clés |
-| Base Neon de production | 🟡 prête — attend `DATABASE_URL` |
+| `.env` réel écrit (Neon + Cloudinary) | ✅ clés hors repo git (`.env` retiré du suivi) |
+| `prisma db push` → Neon | ✅ 24 tables créées (PostgreSQL, pooler + `pgbouncer=true`) |
+| `bun prisma/seed.ts` → Neon | ✅ admin + 4 plans + 8 comptes démo + 24 joueurs, 8 organisations, 10 opportunités, 5 événements, 7 candidatures |
+| Auth NextAuth réelle | ✅ login `club@demo.courtlink` sur la vraie base → session JWT (role=club) |
+| Inscription réelle | ✅ `HTTP 201` → User + Player auto-créés en BDD, doublon → `409` |
+| Mutations persistées | ✅ `toggleFavorite`, `updatePlayer` vérifiés par relecture en base |
+| Sécurité serveur | ✅ sans session → `401` ; payload invalide → `400` ; ownership contrôlé |
+| Upload Cloudinary | ✅ signature OK + **upload réel** → fichier servi sur `res.cloudinary.com/dmnhxis9e/…/courtlink/photos/…png` |
+| **E2E complet** (`scripts/e2e-real.sh`) | ✅ **16/16** |
+
+> Note technique : le paramètre `channel_binding=require` de l'URL Neon n'est pas
+> supporté par le parseur Prisma — l'URL `.env` utilise `sslmode=require&pgbouncer=true`
+> (recommandé par Neon pour le pooler + Prisma). Les 2 URLs « Neon Auth » fournies
+> ne servent pas : l'authentification est NextAuth + bcrypt, indépendante.
+
+## 2. État de la base Neon
+
+- 9 comptes : `admin@courtlink.bj` (admin réel) + 8 comptes démo `*@demo.courtlink`
+- Contenu de démonstration complet (24 joueurs, 8 organisations, 10 opportunités, 5 événements…)
+- Comptes de test E2E supprimés après vérification
+
+**Sécurité avant lancement public :**
+1. Changer le mot de passe admin : re-semer avec `ADMIN_PASSWORD=nouveau bun prisma/seed.ts`, ou le changer en base
+2. Changer les `demo1234` des comptes démo (ou désactiver ces comptes)
+3. Les clés Neon/Cloudinary restent révocables depuis leurs dashboards respectifs
+
+## 3. Push du repo — ce dont j'ai besoin
+
+Le commit est prêt en local (`2d19f6a`, arborescence propre, **aucune clé dans l'historique**).
+Pour pousser vers GitHub, il me faut :
+
+1. **L'URL du repo** — créer un dépôt **vide** sur github.com
+   (ex. `https://github.com/ton-pseudo/courtlink.git`, sans README ni .gitignore)
+2. **Un Personal Access Token (PAT)** GitHub —
+   Settings → Developer settings → Personal access tokens :
+   - *Fine-grained* (recommandé) : accès limité à ce repo, permission **Contents: Read and write**
+   - ou *Classic* avec le scope `repo`
+3. *(optionnel)* ton pseudo GitHub + email pour signer les commits
+
+Je ferai ensuite : `git remote add origin …` → `git push -u origin main`.
+Tu peux **révoquer le token juste après** le push — il ne sert qu'une fois.
+
+*Alternative sans token : je te prépare un bundle/zip du dépôt et tu pousses toi-même
+depuis ta machine (`git push` avec ta propre session).*
+
+## 4. Déploiement Vercel (après le push)
+
+Importer le repo sur vercel.com puis définir les **5 variables d'environnement** :
+
+```
+DATABASE_URL              = postgresql://neondb_owner:…-pooler…neon.tech/neondb?sslmode=require&pgbouncer=true
+NEXTAUTH_URL              = https://ton-domaine.vercel.app
+NEXTAUTH_SECRET           = zRVcWnwpEosz8lP198ynoPQbd8GmQmPH1x7Dl3tSYyE=   (ou régénérer : openssl rand -base64 32)
+NEXT_PUBLIC_DATA_SOURCE   = api
+CLOUDINARY_CLOUD_NAME     = dmnhxis9e
+CLOUDINARY_API_KEY        = 358323226916879
+CLOUDINARY_API_SECRET     = iJLB823ilh0osfP3VCWf0ToMq7s
+```
+
+Aucune migration à lancer : la base est déjà poussée et semée.
