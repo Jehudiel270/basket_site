@@ -158,6 +158,7 @@ export const dict: Record<Lang, Translations> = {
     'pricing.free': 'Gratuit',
 
     // CTA finale
+    'cta.eyebrow': 'Rejoindre le réseau',
     'cta.title1': 'Votre saison prochaine',
     'cta.title2': 'commence sur ce profil.',
     'cta.sub': 'Que vous soyez joueur en quête de visibilité ou recruteur à la recherche du bon profil, le meilleur moment pour rejoindre le réseau, c\u2019est avant la prochaine fenêtre de recrutement.',
@@ -315,6 +316,7 @@ export const dict: Record<Lang, Translations> = {
     'pricing.free': 'Free',
 
     // Final CTA
+    'cta.eyebrow': 'Join the network',
     'cta.title1': 'Your next season',
     'cta.title2': 'starts on this profile.',
     'cta.sub': 'Whether you\u2019re a player looking for exposure or a recruiter searching for the right profile, the best time to join the network is before the next recruiting window.',

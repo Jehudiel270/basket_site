@@ -6,7 +6,7 @@ import { useCourtLink } from '@/lib/store';
 import { PublicHeader, PublicFooter } from '@/components/layout/Chrome';
 import { WorkspaceShell } from '@/components/workspace/Shell';
 import { Hero } from '@/components/home/Hero';
-import { Marquee, DiscoveryBar, StatsBand, FeaturedPlayers, RecentOpportunities, HowItWorks, RolesGrid, Testimonials, PricingTeaser, CTASection, Reveal } from '@/components/home/Sections';
+import { DiscoveryBar, FeaturedPlayers, RecentOpportunities, ClosingCTA } from '@/components/home/Sections';
 import { PlayersDirectory, PlayerProfile } from '@/components/public/Players';
 import { OrgsDirectory, OrgProfile } from '@/components/public/Orgs';
 import { OpportunitiesPage, OpportunityDetail, EventsPage, EventDetail } from '@/components/public/Opportunities';
@@ -142,15 +142,9 @@ export default function Home() {
           <div className="relative z-20 mx-auto max-w-7xl px-4 md:px-6">
             <DiscoveryBar />
           </div>
-          <Marquee />
-          <StatsBand />
           <FeaturedPlayers />
           <RecentOpportunities />
-          <HowItWorks />
-          <RolesGrid />
-          <Testimonials />
-          <PricingTeaser />
-          <CTASection />
+          <ClosingCTA />
         </>
       );
       break;
@@ -274,8 +268,8 @@ function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
           </div>
         ))}
       </div>
-      <p className="mt-6 rounded-xl border border-[var(--amber-glow)]/40 bg-[color-mix(in_oklch,var(--amber-glow)_8%,transparent)] p-4 text-xs leading-relaxed text-muted-foreground">
-        ⚠️ Mode démonstration : toutes les données sont fictives, stockées dans votre navigateur, et les paiements sont simulés. Aucune authentification sécurisée n'est implémentée dans ce prototype.
+      <p className="mt-6 rounded-lg border border-[var(--amber-glow)]/40 bg-[color-mix(in_oklch,var(--amber-glow)_8%,transparent)] p-4 text-xs leading-relaxed text-muted-foreground">
+        <strong className="font-semibold text-foreground">Mode démonstration</strong> — toutes les données sont fictives, stockées dans votre navigateur, et les paiements sont simulés. Aucune authentification sécurisée n'est implémentée dans ce prototype.
       </p>
     </div>
   );

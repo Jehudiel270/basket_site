@@ -62,9 +62,8 @@ export function Hero({ featured }: { featured: number }) {
 
   return (
     <section className="relative min-h-[92vh] overflow-hidden court-lines-bg">
-      {/* halo décoratif */}
-      <div className="pointer-events-none absolute -left-40 top-1/4 h-[480px] w-[480px] rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--ball)_18%,transparent),transparent_65%)] blur-2xl" />
-      <div className="pointer-events-none absolute -right-24 bottom-0 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--amber-glow)_12%,transparent),transparent_65%)] blur-2xl" />
+      {/* halo discret */}
+      <div className="pointer-events-none absolute -left-40 top-1/4 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--ball)_10%,transparent),transparent_65%)] blur-2xl" />
 
       {/* Scène 3D plein écran */}
       <div className="absolute inset-0">
@@ -78,13 +77,16 @@ export function Hero({ featured }: { featured: number }) {
         />
       </div>
 
+      {/* Voile de lisibilité sur mobile (texte au-dessus de la 3D) */}
+      <div className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-b from-[color-mix(in_oklch,var(--background)_92%,transparent)] via-[color-mix(in_oklch,var(--background)_58%,transparent)] to-transparent md:hidden" />
+
       {/* Contenu éditorial */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[92vh] max-w-7xl flex-col justify-end px-4 pb-64 py-16 md:justify-center md:px-6 md:pb-24">
         <div className="max-w-xl md:bg-transparent">
-          <div className="pointer-events-auto fade-up mb-5 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklch,var(--ball)_40%,transparent)] bg-[color-mix(in_oklch,var(--ball)_12%,transparent)] px-3 py-1.5 text-xs font-semibold text-[var(--ball)] backdrop-blur-md">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ball)]" />
+          <p className="fade-up mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--ball)]" style={{ animationDelay: '0s' }}>
+            <span className="h-px w-10 bg-[var(--ball)]/60" />
             {t('hero.badge')}
-          </div>
+          </p>
           <h1 className="fade-up font-display text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]" style={{ animationDelay: '.08s' }}>
             {t('hero.title1')}
             <br />
