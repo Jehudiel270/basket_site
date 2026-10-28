@@ -76,6 +76,7 @@ export async function applyAction(user: SessionUser | null, action: string, payl
   switch (action) {
     /* ── Joueurs ── */
     case 'updatePlayer': {
+      if (typeof p.id !== 'string' || !p.id) throw new ActionError('Identifiant joueur manquant.', 400);
       const pl = await db.player.findUnique({ where: { id: p.id } });
       if (!pl || (pl.ownerId !== u.id && !isStaff)) throw new ActionError('Profil non autorisé.', 403);
       await db.player.update({ where: { id: p.id }, data: serializePatch(p.patch, PLAYER_FIELDS) });
