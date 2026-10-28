@@ -1,0 +1,268 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource/orbitron/700.css";
+@import "@fontsource/orbitron/900.css";
+@import "@fontsource/share-tech-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", var(--font-sans);
+  --font-score: "Orbitron", monospace;
+  --font-mono: "Share Tech Mono", monospace;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(---muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-court: var(--court);
+  --color-court-line: var(--court-line);
+  --color-ball: var(--ball);
+  --color-ball-deep: var(--ball-deep);
+  --color-amber-glow: var(--amber-glow);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* CourtLink light — ivoire & anthracite, orange ballon */
+  --background: oklch(0.97 0.008 85);
+  --foreground: oklch(0.21 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.01 260);
+  --primary: oklch(0.66 0.19 38);
+  --primary-foreground: oklch(0.99 0.005 85);
+  --secondary: oklch(0.93 0.01 85);
+  --secondary-foreground: oklch(0.25 0.01 260);
+  --muted: oklch(0.94 0.008 85);
+  --muted-foreground: oklch(0.5 0.01 260);
+  --accent: oklch(0.94 0.02 60);
+  --accent-foreground: oklch(0.3 0.05 50);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.88 0.01 85);
+  --input: oklch(0.88 0.01 85);
+  --ring: oklch(0.66 0.19 38);
+  --court: oklch(0.24 0.012 260);
+  --court-line: oklch(0.66 0.19 38);
+  --ball: oklch(0.66 0.19 38);
+  --ball-deep: oklch(0.55 0.2 32);
+  --amber-glow: oklch(0.78 0.16 75);
+}
+
+.dark {
+  /* CourtLink dark — parquet nocturne */
+  --background: oklch(0.155 0.008 270);
+  --foreground: oklch(0.93 0.008 85);
+  --card: oklch(0.19 0.01 268);
+  --card-foreground: oklch(0.93 0.008 85);
+  --popover: oklch(0.19 0.01 268);
+  --popover-foreground: oklch(0.93 0.008 85);
+  --primary: oklch(0.7 0.19 41);
+  --primary-foreground: oklch(0.14 0.02 50);
+  --secondary: oklch(0.24 0.012 268);
+  --secondary-foreground: oklch(0.93 0.008 85);
+  --muted: oklch(0.23 0.012 268);
+  --muted-foreground: oklch(0.62 0.012 268);
+  --accent: oklch(0.26 0.02 55);
+  --accent-foreground: oklch(0.88 0.06 70);
+  --destructive: oklch(0.63 0.2 25);
+  --border: oklch(0.27 0.012 268);
+  --input: oklch(0.3 0.012 268);
+  --ring: oklch(0.7 0.19 41);
+  --court: oklch(0.12 0.01 268);
+  --court-line: oklch(0.7 0.19 41);
+  --ball: oklch(0.7 0.19 41);
+  --ball-deep: oklch(0.58 0.2 32);
+  --amber-glow: oklch(0.82 0.15 80);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  ::selection { background: var(--ball); color: oklch(0.14 0.02 50); }
+
+  /* ── Scrollbar personnalisée basketball ── */
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track {
+    background: color-mix(in oklch, var(--court) 60%, transparent);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--ball) 0%, var(--ball-deep) 100%);
+    border-radius: 8px;
+    border: 2px solid color-mix(in oklch, var(--court) 80%, transparent);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, oklch(0.76 0.2 45) 0%, var(--ball) 100%);
+    box-shadow: 0 0 10px color-mix(in oklch, var(--ball) 60%, transparent);
+  }
+  ::-webkit-scrollbar-corner { background: var(--court); }
+  html { scrollbar-color: var(--ball) var(--court); scrollbar-width: thin; }
+}
+
+/* ── Typo display ── */
+.font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.font-score { font-family: var(--font-score); letter-spacing: 0.06em; }
+.font-mono2 { font-family: var(--font-mono); }
+
+/* ── Composants signature ── */
+.text-gradient-ball {
+  background: linear-gradient(100deg, oklch(0.78 0.19 45), oklch(0.66 0.2 32));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card-court {
+  @apply bg-card border border-border rounded-xl;
+  position: relative;
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s;
+}
+.card-court:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklch, var(--ball) 55%, var(--border));
+  box-shadow: 0 12px 40px -12px color-mix(in oklch, var(--ball) 35%, transparent);
+}
+
+.btn-ball {
+  @apply inline-flex items-center gap-2 justify-center font-semibold rounded-lg px-5 py-2.5 text-sm transition-all duration-200;
+  background: linear-gradient(135deg, oklch(0.72 0.19 44), oklch(0.62 0.21 32));
+  color: oklch(0.14 0.02 50);
+  box-shadow: 0 4px 18px -4px color-mix(in oklch, var(--ball) 55%, transparent);
+}
+.btn-ball:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px -6px color-mix(in oklch, var(--ball) 70%, transparent);
+  filter: brightness(1.06);
+}
+.btn-ball:active { transform: translateY(0); }
+
+.btn-ghosty {
+  @apply inline-flex items-center gap-2 justify-center font-semibold rounded-lg px-5 py-2.5 text-sm border border-border transition-all duration-200;
+  background: var(--card);
+  color: var(--foreground);
+}
+.btn-ghosty svg { color: var(--foreground); }
+.btn-ghosty:hover { border-color: var(--ball); color: var(--ball) !important; background: color-mix(in oklch, var(--ball) 12%, var(--card)); }
+.btn-ghosty:hover svg { color: var(--ball); }
+
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border;
+}
+
+.court-lines-bg {
+  background-image:
+    radial-gradient(circle at 50% 120%, color-mix(in oklch, var(--ball) 14%, transparent) 0%, transparent 55%),
+    linear-gradient(color-mix(in oklch, var(--ball) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklch, var(--ball) 6%, transparent) 1px, transparent 1px);
+  background-size: 100% 100%, 56px 56px, 56px 56px;
+}
+
+.halftone {
+  background-image: radial-gradient(color-mix(in oklch, var(--ball) 20%, transparent) 1px, transparent 1.5px);
+  background-size: 14px 14px;
+}
+
+/* Marquee */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-marquee { animation: marquee 32s linear infinite; }
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+/* Ball bounce loader */
+@keyframes ballBounce {
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  35% { transform: translateY(-18px) scaleX(1); }
+  50% { transform: translateY(0) scaleX(1.15); }
+}
+.ball-loader { width: 14px; height: 14px; border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, oklch(0.78 0.19 45), oklch(0.55 0.2 32));
+  animation: ballBounce .7s cubic-bezier(.5,.05,.5,1) infinite; }
+
+/* LED score */
+.led {
+  font-family: var(--font-score);
+  color: oklch(0.75 0.22 38);
+  text-shadow: 0 0 18px color-mix(in oklch, oklch(0.7 0.22 38) 80%, transparent), 0 0 2px oklch(0.7 0.22 38);
+}
+
+@keyframes scorePop {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  20% { transform: translateY(-14px) scale(1.25); opacity: 1; }
+  80% { transform: translateY(-34px) scale(1); opacity: 1; }
+  100% { transform: translateY(-48px) scale(0.9); opacity: 0; }
+}
+.score-pop { animation: scorePop 1.5s ease-out forwards; }
+
+@keyframes swish {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+}
+.net-sway { animation: swish 0.9s ease-in-out; transform-origin: top center; }
+
+/* reveal on scroll (fallback when GSAP absent) */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.fade-up { animation: fadeUp .55s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes popIn { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+.pop-in { animation: popIn .35s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.floaty { animation: floaty 4.5s ease-in-out infinite; }
+
+@keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--ball) 45%, transparent); } 50% { box-shadow: 0 0 22px 4px color-mix(in oklch, var(--ball) 30%, transparent); } }
+.pulse-glow { animation: pulseGlow 2.6s ease-in-out infinite; }
+
+/* skeleton shimmer */
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.skeleton {
+  background: linear-gradient(90deg, var(--muted) 25%, color-mix(in oklch, var(--muted) 60%, var(--ball) 8%) 50%, var(--muted) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* dotted pebble texture for panels */
+.pebble {
+  background-image: radial-gradient(color-mix(in oklch, var(--foreground) 7%, transparent) 1px, transparent 1.2px);
+  background-size: 9px 9px;
+}
+
+/* custom tabular numbers for stats */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* focus visible ring */
+:focus-visible { outline: 2px solid var(--ball); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

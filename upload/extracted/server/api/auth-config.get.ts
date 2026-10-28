@@ -1,0 +1,1 @@
+export default defineEventHandler(() => ({ provider: 'neon-managed-better-auth', configured: Boolean(process.env.NEON_AUTH_BASE_URL && process.env.NEON_AUTH_COOKIE_SECRET), baseUrlPresent: Boolean(process.env.NEON_AUTH_BASE_URL), cookieSecretPresent: Boolean(process.env.NEON_AUTH_COOKIE_SECRET), note: 'Les secrets ne sont jamais renvoyés par cette route.' }))
