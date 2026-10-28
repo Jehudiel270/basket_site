@@ -76,6 +76,7 @@ export const dict: Record<Lang, Translations> = {
     'hero.pop.miss': 'RATÉ !',
 
     // Moteur de découverte
+    'discover.kicker': 'Console de recherche',
     'discover.title': 'Trouvez votre futur joueur ou votre futur club',
     'discover.placeholder': 'Nom, ville, club…',
     'discover.allPositions': 'Tous les postes',
@@ -234,6 +235,7 @@ export const dict: Record<Lang, Translations> = {
     'hero.pop.miss': 'MISSED!',
 
     // Discovery engine
+    'discover.kicker': 'Search console',
     'discover.title': 'Find your next player or your next club',
     'discover.placeholder': 'Name, city, club…',
     'discover.allPositions': 'All positions',

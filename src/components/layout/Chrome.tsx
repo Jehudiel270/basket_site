@@ -12,13 +12,13 @@ import { cn } from '@/lib/utils';
 export function Logo({ onClick }: { onClick?: () => void }) {
   return (
     <button onClick={onClick ?? (() => navigate('/'))} className="flex items-center gap-2.5" aria-label="CourtLink — accueil">
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--ball)] to-[var(--ball-deep)] shadow-[0_4px_16px_-4px_color-mix(in_oklch,var(--ball)_60%,transparent)]">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ball)] shadow-[2px_2px_0_0_var(--press)]">
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="#26120a" strokeWidth="1.8">
           <circle cx="12" cy="12" r="9.5" />
           <path d="M2.5 12h19M12 2.5v19M5 5c3.5 3.5 3.5 10.5 0 14M19 5c-3.5 3.5-3.5 10.5 0 14" />
         </svg>
       </span>
-      <span className="font-display text-lg font-bold tracking-tight">
+      <span className="font-display text-lg font-black uppercase tracking-tight">
         Court<span className="text-[var(--ball)]">Link</span>
       </span>
     </button>
@@ -37,14 +37,14 @@ const NAV = [
 export function LangToggle() {
   const { lang, setLang } = useLang();
   return (
-    <div className="flex h-9 items-center rounded-lg border border-border p-0.5" role="group" aria-label="Langue / Language">
+    <div className="flex h-9 items-center rounded-[3px] border border-border p-0.5" role="group" aria-label="Langue / Language">
       {(['fr', 'en'] as const).map(l => (
         <button
           key={l}
           onClick={() => setLang(l)}
           aria-pressed={lang === l}
           className={cn(
-            'h-7.5 rounded-md px-2 text-[11px] font-bold uppercase tracking-wider transition-colors',
+            'h-7.5 rounded-[2px] px-2 font-mono2 text-[11px] uppercase tracking-wider transition-colors',
             lang === l ? 'bg-[var(--ball)] text-black' : 'text-muted-foreground hover:text-foreground'
           )}
         >
@@ -61,7 +61,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-[var(--ball)] hover:text-[var(--ball)]"
+      className="flex h-9 w-9 items-center justify-center rounded-[3px] border border-border text-muted-foreground transition-colors hover:border-[var(--ball)] hover:text-[var(--ball)]"
       aria-label="Changer de thème / Switch theme"
     >
       {mounted && theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
@@ -102,14 +102,16 @@ export function PublicHeader({ route }: { route: string }) {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-6">
         <Logo />
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Navigation principale">
+        <nav className="hidden items-stretch gap-6 lg:flex lg:[&>button]:flex lg:[&>button]:h-16 lg:[&>button]:items-center" aria-label="Navigation principale">
           {NAV.map(n => (
             <button
               key={n.hash}
               onClick={() => navigate(n.hash)}
               className={cn(
-                'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                route === n.hash ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                'border-b-2 px-0.5 text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors',
+                route === n.hash
+                  ? 'border-[var(--ball)] text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
             >
               {t(n.key)}
@@ -150,8 +152,8 @@ export function PublicHeader({ route }: { route: string }) {
             </>
           ) : (
             <>
-              <button onClick={() => navigate('/connexion')} className="btn-ghosty hidden !py-2 text-xs sm:inline-flex">{t('header.login')}</button>
-              <button onClick={() => navigate('/inscription')} className="btn-ball !py-2 text-xs">
+              <button onClick={() => navigate('/connexion')} className="btn-ghosty !hidden !py-2 text-xs sm:!inline-flex">{t('header.login')}</button>
+              <button onClick={() => navigate('/inscription')} className="btn-ball !hidden !py-2 text-xs min-[480px]:!inline-flex">
                 {t('header.register')}
               </button>
             </>
@@ -163,20 +165,25 @@ export function PublicHeader({ route }: { route: string }) {
       </div>
       {open && (
         <div className="border-t border-border bg-background/95 backdrop-blur-xl lg:hidden">
-          <nav className="mx-auto grid max-w-7xl gap-1 px-4 py-3" aria-label="Navigation mobile">
+          <nav className="mx-auto grid max-w-7xl gap-0.5 px-4 py-3" aria-label="Navigation mobile">
             {NAV.map(n => (
               <button
                 key={n.hash}
                 onClick={() => { navigate(n.hash); setOpen(false); }}
-                className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="rounded-[3px] px-3 py-2.5 text-left text-[13px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {t(n.key)}
               </button>
             ))}
-            {loggedIn && (
+            {loggedIn ? (
               <button onClick={() => { navigate(role === 'admin' ? '/admin' : '/app'); setOpen(false); }} className="btn-ball mt-2">
                 Mon espace {roleLabels[role]}
               </button>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button onClick={() => { navigate('/connexion'); setOpen(false); }} className="btn-ghosty !py-2 text-xs">{t('header.login')}</button>
+                <button onClick={() => { navigate('/inscription'); setOpen(false); }} className="btn-ball !py-2 text-xs">{t('header.register')}</button>
+              </div>
             )}
           </nav>
         </div>
@@ -220,30 +227,30 @@ export function PublicFooter() {
     },
   ];
   return (
-    <footer className="mt-auto border-t border-border bg-[var(--court)]">
-      <div className="mx-auto max-w-7xl px-4 py-14 md:px-6">
+    <footer className="grain relative mt-auto border-t border-border bg-[var(--court)]">
+      <div className="relative mx-auto max-w-7xl px-4 py-14 on-court md:px-6">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Logo />
-            <p className="mt-4 max-w-xs text-sm text-muted-foreground">
+            <p className="on-court-muted mt-4 max-w-xs text-sm leading-relaxed">
               {t('footer.tagline')}
             </p>
-            <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               {['footer.chip.fcfa', 'footer.chip.lang', 'footer.chip.mobile'].map(k => (
-                <span key={k} className="chip border-border bg-card text-muted-foreground">{t(k)}</span>
+                <span key={k} className="rounded-[3px] border border-white/15 px-2 py-1 font-mono2 text-[10px] uppercase tracking-[0.1em] on-court-muted">{t(k)}</span>
               ))}
             </div>
-            <p className="mt-5 max-w-xs text-[11px] leading-relaxed text-muted-foreground/70">
+            <p className="on-court-faint mt-5 max-w-xs text-[11px] leading-relaxed">
               {t('footer.disclaimer')}
             </p>
           </div>
           {cols.map(c => (
             <div key={c.title}>
-              <h3 className="mb-4 font-display text-sm font-bold uppercase tracking-wider">{c.title}</h3>
+              <h3 className="mb-4 font-mono2 text-[11px] uppercase tracking-[0.2em] text-[var(--ball)]">{c.title}</h3>
               <ul className="space-y-2.5">
                 {c.links.map((l, li) => (
                   <li key={`${l.hash}-${li}`}>
-                    <button onClick={() => navigate(l.hash)} className="text-sm text-muted-foreground transition-colors hover:text-[var(--ball)]">
+                    <button onClick={() => navigate(l.hash)} className="on-court-muted text-sm transition-colors hover:text-[var(--ball)]">
                       {l.label}
                     </button>
                   </li>
@@ -252,13 +259,16 @@ export function PublicFooter() {
             </div>
           ))}
         </div>
-        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground">
+        <div className="on-court-faint mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6 font-mono2 text-[11px] uppercase tracking-[0.1em]">
           <p>{t('footer.copyright')}</p>
-          <p className="flex items-center gap-1.5">
+          <p className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[var(--ball)] pulse-glow" />
             {t('footer.demoActive')}
           </p>
         </div>
+        <p aria-hidden className="pointer-events-none mt-10 select-none overflow-hidden whitespace-nowrap text-center font-score text-[clamp(3rem,9vw,7.5rem)] leading-none text-white/[0.045]">
+          COURTLINK
+        </p>
       </div>
     </footer>
   );

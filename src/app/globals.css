@@ -44,6 +44,8 @@
 
 :root {
   --radius: 0.5rem;
+  /* encre d'impression pour ombres dures (boutons tampon, cartes) */
+  --press: oklch(0.21 0.01 260);
   /* CourtLink light — ivoire & anthracite, orange ballon */
   --background: oklch(0.97 0.008 85);
   --foreground: oklch(0.21 0.01 260);
@@ -72,6 +74,7 @@
 
 .dark {
   /* CourtLink dark — parquet nocturne */
+  --press: oklch(0.55 0.2 32);
   --background: oklch(0.155 0.008 270);
   --foreground: oklch(0.93 0.008 85);
   --card: oklch(0.19 0.01 268);
@@ -129,42 +132,102 @@
 .font-score { font-family: var(--font-score); letter-spacing: 0.06em; }
 .font-mono2 { font-family: var(--font-mono); }
 
-/* ── Composants signature ── */
+/* ── Composants signature « Courtside Press » ── */
 .text-gradient-ball {
   color: var(--ball);
 }
 
+/* Carte de base : angles vifs, filet fin — la variante .hard porte l'ombre d'impression */
 .card-court {
-  @apply bg-card border border-border rounded-lg;
+  @apply bg-card border border-border rounded-[4px];
   position: relative;
-  transition: border-color .2s ease;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .card-court:hover {
   border-color: color-mix(in oklch, var(--ball) 45%, var(--border));
 }
+.card-court.hard {
+  box-shadow: 4px 4px 0 0 var(--press);
+}
+.card-court.hard:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--press);
+}
 
+/* Bouton tampon : majuscules espacées, ombre dure qui s'écrase au clic */
 .btn-ball {
-  @apply inline-flex items-center gap-2 justify-center font-semibold rounded-md px-5 py-2.5 text-sm transition-colors duration-150;
+  @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] transition-all duration-150;
   background: var(--ball);
   color: oklch(0.16 0.02 50);
+  box-shadow: 3px 3px 0 0 var(--press);
 }
 .btn-ball:hover {
-  background: var(--ball-deep);
-  color: oklch(0.97 0.008 85);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 var(--press);
 }
-.btn-ball:active { transform: translateY(0.5px); }
+.btn-ball:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--press);
+}
 
+/* Bouton contour : à l'écran, se remplit au survol comme un tampon encré */
 .btn-ghosty {
-  @apply inline-flex items-center gap-2 justify-center font-semibold rounded-md px-5 py-2.5 text-sm border border-border transition-colors duration-150;
+  @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] border border-foreground/25 transition-all duration-150;
   background: transparent;
   color: var(--foreground);
 }
-.btn-ghosty svg { color: var(--foreground); }
-.btn-ghosty:hover { border-color: var(--ball); color: var(--ball) !important; background: color-mix(in oklch, var(--ball) 12%, var(--card)); }
-.btn-ghosty:hover svg { color: var(--ball); }
+.btn-ghosty:hover {
+  border-color: var(--press);
+  background: var(--ball);
+  color: oklch(0.16 0.02 50) !important;
+  box-shadow: 3px 3px 0 0 var(--press);
+}
+.btn-ghosty svg { color: inherit; }
 
+/* Puce carrée monospace — remplace les pilules arrondies */
 .chip {
-  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border;
+  font-family: var(--font-mono);
+  @apply inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] border;
+}
+
+/* Tag d'étiquette : petite case mono pour méta-infos */
+.tag {
+  font-family: var(--font-mono);
+  @apply inline-flex items-center gap-1.5 rounded-[3px] border border-border bg-muted/50 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-muted-foreground;
+}
+
+/* Texte posé sur fond parquet (--court, toujours sombre) */
+.on-court { color: oklch(0.93 0.008 85); }
+.on-court-muted { color: oklch(0.93 0.008 85 / 0.62); }
+.on-court-faint { color: oklch(0.93 0.008 85 / 0.38); }
+
+/* Grain papier — à poser en ::after via .grain sur un conteneur relative */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Numéro géant contour (maillot fantôme) */
+.ghost-num {
+  font-family: var(--font-score);
+  font-weight: 900;
+  line-height: 0.78;
+  color: transparent;
+  -webkit-text-stroke: 1.5px currentColor;
+  user-select: none;
+}
+
+/* Titre éditorial : capitales noires serrées */
+.headline {
+  font-family: var(--font-display);
+  @apply font-black uppercase;
+  letter-spacing: -0.015em;
+  line-height: 0.95;
 }
 
 .court-lines-bg {

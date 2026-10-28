@@ -6,7 +6,7 @@ import { useCourtLink } from '@/lib/store';
 import { PublicHeader, PublicFooter } from '@/components/layout/Chrome';
 import { WorkspaceShell } from '@/components/workspace/Shell';
 import { Hero } from '@/components/home/Hero';
-import { DiscoveryBar, FeaturedPlayers, RecentOpportunities, ClosingCTA } from '@/components/home/Sections';
+import { Ticker, FeaturedPlayers, RecentOpportunities, ClosingCTA } from '@/components/home/Sections';
 import { PlayersDirectory, PlayerProfile } from '@/components/public/Players';
 import { OrgsDirectory, OrgProfile } from '@/components/public/Orgs';
 import { OpportunitiesPage, OpportunityDetail, EventsPage, EventDetail } from '@/components/public/Opportunities';
@@ -139,9 +139,7 @@ export default function Home() {
       page = (
         <>
           <Hero featured={players.length} />
-          <div className="relative z-20 mx-auto max-w-7xl px-4 md:px-6">
-            <DiscoveryBar />
-          </div>
+          <Ticker />
           <FeaturedPlayers />
           <RecentOpportunities />
           <ClosingCTA />

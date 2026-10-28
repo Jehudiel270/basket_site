@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowRight, Play, ShieldCheck, MapPin, Users, RotateCcw, Zap } from 'lucide-react';
+import { ArrowRight, Play, RotateCcw, Zap } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { useT } from '@/lib/i18n';
@@ -83,11 +83,11 @@ export function Hero({ featured }: { featured: number }) {
       {/* Contenu éditorial */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[92vh] max-w-7xl flex-col justify-end px-4 pb-64 py-16 md:justify-center md:px-6 md:pb-24">
         <div className="max-w-xl md:bg-transparent">
-          <p className="fade-up mb-5 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--ball)]" style={{ animationDelay: '0s' }}>
+          <p className="fade-up mb-5 flex items-center gap-3 font-mono2 text-[11px] uppercase tracking-[0.22em] text-[var(--ball)]" style={{ animationDelay: '0s' }}>
             <span className="h-px w-10 bg-[var(--ball)]/60" />
             {t('hero.badge')}
           </p>
-          <h1 className="fade-up font-display text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]" style={{ animationDelay: '.08s' }}>
+          <h1 className="headline fade-up text-4xl sm:text-5xl lg:text-6xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]" style={{ animationDelay: '.08s' }}>
             {t('hero.title1')}
             <br />
             <span className="text-gradient-ball">{t('hero.title2')}</span>
@@ -103,11 +103,11 @@ export function Hero({ featured }: { featured: number }) {
               <Play size={16} /> {t('hero.cta.createProfile')}
             </button>
           </div>
-          <div className="fade-up mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground" style={{ animationDelay: '.32s' }}>
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-[var(--ball)]" /> {t('hero.trust.verified')}</span>
-            <span className="inline-flex items-center gap-1.5"><Users size={14} className="text-[var(--ball)]" /> {featured}+ {t('hero.trust.players')}</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin size={14} className="text-[var(--ball)]" /> {t('hero.trust.countries')}</span>
-          </div>
+          <p className="fade-up mt-7 max-w-md font-mono2 text-[11px] uppercase tracking-[0.16em] text-white/75 [text-shadow:0_1px_12px_rgba(0,0,0,0.85)]" style={{ animationDelay: '.32s' }}>
+            {t('hero.trust.verified')} <span className="mx-1.5 text-[var(--ball)]">/</span>
+            {featured}+ {t('hero.trust.players')} <span className="mx-1.5 text-[var(--ball)]">/</span>
+            {t('hero.trust.countries')}
+          </p>
         </div>
       </div>
 
