@@ -18,6 +18,7 @@ model User {
   passwordHash  String
   name          String
   role          String   @default("player") // visitor|player|guardian|club|scout|organizer|moderator|support|admin
+  isSuperAdmin  Boolean  @default(false) // nomme les admins et les autres super admins
   country       String?
   phone         String?
   subPlanId     String?

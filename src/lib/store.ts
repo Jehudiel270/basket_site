@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toast } from 'sonner';
 import type {
-  DemoState, Player, Role, Opportunity, ApplicationStatus, CourtEvent,
+  DemoState, Player, Role, StaffMember, Opportunity, ApplicationStatus, CourtEvent,
   Application, EventRegistration, Conversation, Verification, Report, Plan,
   ScoutingReport, PrivateNote, PlatformSettings, Payment,
 } from './types';
@@ -47,6 +47,9 @@ export interface CourtLinkStore extends DemoState {
   // favorites / follows
   toggleFavorite: (playerId: string) => void;
   toggleFollow: (orgId: string) => void;
+  // staff (gestion super admin)
+  setStaffRole: (userId: string, newRole: StaffMember['role']) => void;
+  setSuperAdmin: (userId: string, on: boolean) => void;
   // messaging
   sendMessage: (convId: string, body: string) => void;
   startConversation: (targetName: string, subject: string, body: string) => void;
@@ -117,6 +120,12 @@ const initialData = (): Omit<DemoState, 'role' | 'loggedIn' | 'currentUserId'> =
   followedClubs: ['org1', 'org2'],
   hiddenContent: [],
   suspendedAccounts: [],
+  isSuperAdmin: false,
+  staff: [
+    { id: 'u1', name: 'Admin général', email: 'admin@demo.courtlink', role: 'admin', isSuperAdmin: true },
+    { id: 'u2', name: 'Camille H.', email: 'moderation@demo.courtlink', role: 'moderator', isSuperAdmin: false },
+    { id: 'u3', name: 'Nadège S.', email: 'support@demo.courtlink', role: 'support', isSuperAdmin: false },
+  ],
   settings: {
     brandName: 'CourtLink', tagline: 'Le réseau de confiance du basketball ouest-africain',
     accentColor: '#FF6B1A', maintenance: false, newRegistrations: true,
@@ -154,7 +163,7 @@ export const useCourtLink = create<CourtLinkStore>()(
       })),
 
       login: (role, name) => {
-        set({ role, loggedIn: true, currentUserId: role === 'player' ? 'p1' : role === 'club' ? 'org1' : `demo-${role}` });
+        set({ role, loggedIn: true, currentUserId: role === 'player' ? 'p1' : role === 'club' ? 'org1' : `demo-${role}`, isSuperAdmin: role === 'admin' });
         if (name) roleNames[role] = name;
         toast.success(`Connecté en mode démonstration — ${roleNames[role]}`);
         get().addAudit(`Connexion mode démo (${role})`, 'Session');
@@ -392,6 +401,32 @@ export const useCourtLink = create<CourtLinkStore>()(
         if (accountId.startsWith('org')) set(s => ({ organizations: s.organizations.map(o => (o.id === accountId ? { ...o, suspended: false } : o)) }));
         toast.success('Compte réactivé.');
         get().addAudit(`Réactivation du compte ${accountId}`, 'Administration');
+      },
+
+      setStaffRole: (userId, newRole) => {
+        const target = get().staff.find(m => m.id === userId);
+        if (!target) return;
+        set(s => ({
+          staff: s.staff.map(m => (m.id === userId ? { ...m, role: newRole, isSuperAdmin: newRole === 'visitor' ? false : m.isSuperAdmin } : m)),
+        }));
+        if (isApiMode()) void pushAction('setStaffRole', { userId, role: newRole });
+        toast.success(newRole === 'visitor' ? `${target.name} : accès staff retiré.` : `${target.name} : nouveau rôle ${newRole}.`);
+        get().addAudit(`Rôle staff : ${target.name} → ${newRole}`, 'Administration');
+      },
+
+      setSuperAdmin: (userId, on) => {
+        const target = get().staff.find(m => m.id === userId);
+        if (!target) return;
+        if (userId === get().currentUserId) {
+          toast.error('Vous ne pouvez pas modifier votre propre statut super admin.');
+          return;
+        }
+        set(s => ({
+          staff: s.staff.map(m => (m.id === userId ? { ...m, isSuperAdmin: on, role: on && m.role === 'visitor' ? ('admin' as const) : m.role } : m)),
+        }));
+        if (isApiMode()) void pushAction('setSuperAdmin', { userId, on });
+        toast.success(on ? `${target.name} est maintenant super administrateur.` : `Le statut super admin de ${target.name} a été retiré.`);
+        get().addAudit(`Super admin ${on ? 'accordé' : 'retiré'} : ${target.name}`, 'Administration');
       },
 
       addScoutingReport: (r) => {

@@ -322,10 +322,20 @@ export interface PlatformSettings {
   featuredSlots: number;
 }
 
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'moderator' | 'support' | 'visitor';
+  isSuperAdmin: boolean;
+}
+
 export interface DemoState {
   role: Role;
   loggedIn: boolean;
   currentUserId: string;
+  isSuperAdmin: boolean;
+  staff: StaffMember[];
   players: Player[];
   organizations: Organization[];
   opportunities: Opportunity[];

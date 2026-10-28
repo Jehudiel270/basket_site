@@ -38,8 +38,8 @@ async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'courtlink-admin-2026';
   await db.user.upsert({
     where: { email: adminEmail },
-    update: {},
-    create: { email: adminEmail, name: 'Administrateur CourtLink', role: 'admin', passwordHash: bcrypt.hashSync(adminPassword, 10) },
+    update: { isSuperAdmin: true },
+    create: { email: adminEmail, name: 'Administrateur CourtLink', role: 'admin', isSuperAdmin: true, passwordHash: bcrypt.hashSync(adminPassword, 10) },
   });
   console.log(`✔ admin réel : ${adminEmail}`);
 

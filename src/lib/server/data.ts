@@ -8,7 +8,7 @@ import type {
   DemoState, Player, Organization, Opportunity, Application, CourtEvent,
   EventRegistration, Conversation, Notification, Verification, Report, Ticket,
   Payment, Plan, AuditLog, ScoutingReport, SavedSearch, PrivateNote,
-  ConsentRequest, PlatformSettings, Role, Visibility,
+  ConsentRequest, PlatformSettings, Role, Visibility, StaffMember,
 } from '@/lib/types';
 
 export interface SessionUser { id: string; name: string; role: string }
@@ -164,10 +164,22 @@ export async function buildState(user: SessionUser | null): Promise<DemoState & 
 
   const myPlayers = players.filter(p => p.ownerId === user?.id);
 
+  /* Équipe staff — visible par l'administration ; le nommage est réservé au super admin */
+  const isSuperAdmin = !!userRow?.isSuperAdmin;
+  const staff = user?.role === 'admin'
+    ? await db.user.findMany({
+        where: { role: { in: ['admin', 'moderator', 'support'] } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, name: true, email: true, role: true, isSuperAdmin: true },
+      })
+    : [];
+
   return {
     role: (user?.role as Role) ?? 'visitor',
     loggedIn: !!user,
     currentUserId: myPlayers[0]?.id ?? user?.id ?? '',
+    isSuperAdmin: !!userRow?.isSuperAdmin,
+    staff: staff as StaffMember[],
     players: players.map(mapPlayer),
     organizations: orgs.map(mapOrg),
     opportunities: opps.filter(o => o.status !== 'Brouillon' || myOrgIds.includes(o.orgId)).map(mapOpp),

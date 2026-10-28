@@ -400,6 +400,47 @@ export async function applyAction(user: SessionUser | null, action: string, payl
       break;
     }
 
+    /* ── Staff & super administration ── */
+    case 'setStaffRole': {
+      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+      const newRole = String(p.role);
+      if (!['admin', 'moderator', 'support', 'visitor'].includes(newRole)) throw new ActionError('Rôle cible invalide.', 400);
+      const targetUser = await db.user.findUnique({ where: { id: String(p.userId) } });
+      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+      if (targetUser.id === u.id && newRole !== 'admin') throw new ActionError('Vous ne pouvez pas retirer vos propres accès.', 400);
+      if (targetUser.isSuperAdmin && newRole === 'visitor') {
+        const supers = await db.user.count({ where: { isSuperAdmin: true } });
+        if (supers <= 1) throw new ActionError('Impossible de retirer le dernier super administrateur.', 400);
+      }
+      await db.user.update({
+        where: { id: targetUser.id },
+        data: newRole === 'visitor' ? { role: 'visitor', isSuperAdmin: false } : { role: newRole },
+      });
+      await audit(u.name, `Rôle staff : ${targetUser.email} → ${newRole}`, 'Administration');
+      await notify(targetUser.id, 'Vos accès ont été mis à jour', newRole === 'visitor' ? 'Votre accès staff a été retiré par un super administrateur.' : `Votre nouveau rôle : ${newRole}.`, newRole === 'visitor' ? 'warning' : 'success');
+      break;
+    }
+    case 'setSuperAdmin': {
+      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+      if (String(p.userId) === u.id) throw new ActionError('Vous ne pouvez pas modifier votre propre statut super admin.', 400);
+      const targetUser = await db.user.findUnique({ where: { id: String(p.userId) } });
+      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+      const on = !!p.on;
+      if (!on) {
+        const supers = await db.user.count({ where: { isSuperAdmin: true } });
+        if (supers <= 1) throw new ActionError('Impossible de retirer le dernier super administrateur.', 400);
+      }
+      await db.user.update({
+        where: { id: targetUser.id },
+        data: { isSuperAdmin: on, ...(on && !['admin', 'moderator', 'support'].includes(targetUser.role) ? { role: 'admin' } : {}) },
+      });
+      await audit(u.name, `Super admin ${on ? 'accordé' : 'retiré'} : ${targetUser.email}`, 'Administration');
+      await notify(targetUser.id, on ? 'Statut super administrateur accordé' : 'Statut super administrateur retiré', on ? 'Un super administrateur vous a nommé super administrateur.' : 'Votre statut de super administrateur a été retiré.', on ? 'success' : 'warning');
+      break;
+    }
+
     /* ── Paramètres plateforme ── */
     case 'updateSettings': {
       if (u.role !== 'admin') throw new ActionError('Réservé à l\u2019administration.', 403);
