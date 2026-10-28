@@ -57,3 +57,6 @@ db/
 
 # Artefacts E2E locaux
 scripts/.e2e-*
+
+# Documents de livraison (hors repo — contiennent des références privées)
+download/
