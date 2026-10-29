@@ -1,0 +1,518 @@
+     1→/**
+     2→ * CourtLink — bus d'actions serveur (« mode réel »).
+     3→ * Chaque mutation du client arrive ici via POST /api/actions/[action],
+     4→ * est validée par session + ownership, puis écrite dans Prisma.
+     5→ */
+     6→import bcrypt from 'bcryptjs';
+     7→import { db } from '@/lib/db';
+     8→import { ensureDemoUsers, ensureDemoContent, lockedHash, DEMO_DOMAIN } from './demo-data';
+     9→import type { SessionUser } from '@/lib/server/data';
+    10→
+    11→const J = (v: unknown): string => JSON.stringify(v ?? []);
+    12→const now = () => new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    13→const today = () => new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    14→
+    15→class ActionError extends Error {
+    16→  status: number;
+    17→  constructor(message: string, status = 400) { super(message); this.status = status; }
+    18→}
+    19→
+    20→const staff = (u: SessionUser) => ['moderator', 'support', 'admin'].includes(u.role);
+    21→
+    22→/** Serialise un patch : tableaux/objets → JSON, booléens/nombres/texte → brut. */
+    23→function serializePatch(patch: Record<string, unknown>, allowed: string[]): Record<string, unknown> {
+    24→  const out: Record<string, unknown> = {};
+    25→  for (const k of allowed) {
+    26→    if (!(k in patch)) continue;
+    27→    const v = patch[k];
+    28→    out[k] = (Array.isArray(v) || (v && typeof v === 'object')) ? J(v) : v;
+    29→  }
+    30→  return out;
+    31→}
+    32→
+    33→async function myPlayer(userId: string) {
+    34→  const p = await db.player.findFirst({ where: { ownerId: userId } });
+    35→  if (!p) throw new ActionError('Aucun profil joueur associé à ce compte.', 403);
+    36→  return p;
+    37→}
+    38→
+    39→async function myOrg(userId: string) {
+    40→  const o = await db.organization.findFirst({ where: { ownerId: userId } });
+    41→  if (!o) throw new ActionError('Aucune organisation associée à ce compte.', 403);
+    42→  return o;
+    43→}
+    44→
+    45→async function audit(actor: string, action: string, scope: string) {
+    46→  await db.auditLog.create({ data: { id: `l-${Date.now()}-${Math.floor(Math.random() * 1e4)}`, time: now(), actor, action, scope } });
+    47→}
+    48→
+    49→async function notify(userId: string, title: string, body: string, kind = 'info') {
+    50→  await db.notification.create({ data: { id: `n-${Date.now()}-${Math.floor(Math.random() * 1e4)}`, userId, title, body, time: 'À l\u2019instant', kind } });
+    51→}
+    52→
+    53→const PLAYER_FIELDS = ['name', 'photo', 'country', 'city', 'birthDate', 'height', 'weight', 'position', 'secondaryPositions', 'dominantHand', 'club', 'number', 'rating', 'verified', 'available', 'visibility', 'bio', 'languages', 'availability', 'goals', 'targetZones', 'education', 'experience', 'stats', 'videos', 'references', 'isMinor', 'suspended', 'wingspan', 'verticalReach'];
+    54→const ORG_FIELDS = ['name', 'type', 'country', 'city', 'logoSeed', 'image', 'verified', 'verificationStatus', 'members', 'playersCount', 'founded', 'description', 'divisions', 'achievements', 'staff', 'suspended'];
+    55→const OPP_FIELDS = ['title', 'type', 'country', 'city', 'position', 'ageRange', 'level', 'deadline', 'startDate', 'status', 'description', 'requirements', 'conditions', 'slots', 'salary'];
+    56→const EVENT_FIELDS = ['title', 'kind', 'city', 'country', 'venue', 'date', 'endDate', 'capacity', 'description', 'program', 'price', 'ageRange', 'status', 'image', 'results'];
+    57→const PLAN_FIELDS = ['name', 'audience', 'price', 'currency', 'period', 'features', 'highlighted', 'active'];
+    58→
+    59→export async function applyAction(user: SessionUser | null, action: string, payload: Record<string, never> | any): Promise<{ ok: true; [key: string]: unknown }> {
+    60→  const u = user;
+    61→  const p = (payload ?? {}) as Record<string, any>;
+    62→
+    63→  /* ── Actions publiques (sans session) ── */
+    64→  if (action === 'submitReport') {
+    65→    await db.report.create({ data: {
+    66→      id: `rp-${Date.now()}`, subject: String(p.reason ?? 'Signalement'), target: String(p.target ?? ''),
+    67→      reason: String(p.reason ?? ''), details: String(p.details ?? ''), status: 'À traiter',
+    68→      priority: 'Normale', submitted: 'À l\u2019instant', reporter: u?.name ?? 'Visiteur',
+    69→    } });
+    70→    await audit(u?.name ?? 'Visiteur', `Nouveau signalement sur ${p.target}`, 'Modération');
+    71→    if (u) await notify(u.id, 'Signalement transmis', 'La modération prend le relais. Merci.', 'success');
+    72→    return { ok: true };
+    73→  }
+    74→
+    75→  if (!u) throw new ActionError('Session requise.', 401);
+    76→  const isStaff = staff(u);
+    77→
+    78→  switch (action) {
+    79→    /* ── Joueurs ── */
+    80→    case 'updatePlayer': {
+    81→      if (typeof p.id !== 'string' || !p.id) throw new ActionError('Identifiant joueur manquant.', 400);
+    82→      const pl = await db.player.findUnique({ where: { id: p.id } });
+    83→      if (!pl || (pl.ownerId !== u.id && !isStaff)) throw new ActionError('Profil non autorisé.', 403);
+    84→      await db.player.update({ where: { id: p.id }, data: serializePatch(p.patch, PLAYER_FIELDS) });
+    85→      break;
+    86→    }
+    87→    case 'addSeasonStat': {
+    88→      const pl = await myPlayer(u.id);
+    89→      const stats = JSON.parse(pl.stats || '[]');
+    90→      stats.unshift(p.stat);
+    91→      await db.player.update({ where: { id: pl.id }, data: { stats: J(stats) } });
+    92→      break;
+    93→    }
+    94→
+    95→    /* ── Opportunités ── */
+    96→    case 'createOpportunity': {
+    97→      const org = await myOrg(u.id);
+    98→      await db.opportunity.create({ data: {
+    99→        id: String(p.id ?? `o-${Date.now()}`), orgId: org.id, org: org.name,
+   100→        title: String(p.title ?? 'Sans titre'), type: String(p.type ?? ''), country: String(p.country ?? org.country),
+   101→        city: String(p.city ?? org.city), position: String(p.position ?? ''), ageRange: String(p.ageRange ?? ''),
+   102→        level: String(p.level ?? ''), deadline: String(p.deadline ?? ''), startDate: String(p.startDate ?? ''),
+   103→        status: 'Ouverte', description: String(p.description ?? ''),
+   104→        requirements: J(p.requirements), conditions: J(p.conditions),
+   105→        slots: Number(p.slots ?? 1), applicants: 0, salary: String(p.salary ?? ''), createdAt: today(),
+   106→      } });
+   107→      await audit(u.name, `Publication de l\u2019opportunité « ${p.title} »`, 'Opportunités');
+   108→      break;
+   109→    }
+   110→    case 'updateOpportunity': {
+   111→      const opp = await db.opportunity.findUnique({ where: { id: p.id } });
+   112→      if (!opp) throw new ActionError('Opportunité introuvable.', 404);
+   113→      const org = await db.organization.findUnique({ where: { id: opp.orgId } });
+   114→      if (!org || (org.ownerId !== u.id && !isStaff)) throw new ActionError('Opportunité non autorisée.', 403);
+   115→      await db.opportunity.update({ where: { id: p.id }, data: serializePatch(p.patch, OPP_FIELDS) });
+   116→      break;
+   117→    }
+   118→
+   119→    /* ── Candidatures ── */
+   120→    case 'applyToOpportunity': {
+   121→      const pl = await myPlayer(u.id);
+   122→      const opp = await db.opportunity.findUnique({ where: { id: p.oppId } });
+   123→      if (!opp) throw new ActionError('Opportunité introuvable.', 404);
+   124→      const dup = await db.application.findFirst({ where: { playerId: pl.id, opportunityId: opp.id } });
+   125→      if (dup) break;
+   126→      await db.application.create({ data: {
+   127→        id: `a-${Date.now()}`, playerId: pl.id, playerName: pl.name, opportunityId: opp.id,
+   128→        opportunityTitle: opp.title, orgId: opp.orgId, status: 'Nouveau', updatedAt: 'À l\u2019instant',
+   129→        motivation: String(p.motivation ?? ''), history: J([{ status: 'Nouveau', date: today() }]),
+   130→      } });
+   131→      await db.opportunity.update({ where: { id: opp.id }, data: { applicants: { increment: 1 } } });
+   132→      await audit(u.name, `Candidature sur « ${opp.title} »`, 'Candidatures');
+   133→      await notify(u.id, 'Candidature envoyée', `Votre dossier pour « ${opp.title} » est en attente d\u2019examen.`, 'success');
+   134→      break;
+   135→    }
+   136→    case 'setApplicationStatus': {
+   137→      const app = await db.application.findUnique({ where: { id: p.appId } });
+   138→      if (!app) throw new ActionError('Candidature introuvable.', 404);
+   139→      const org = await db.organization.findUnique({ where: { id: app.orgId } });
+   140→      if (!org || (org.ownerId !== u.id && !isStaff)) throw new ActionError('Pipeline non autorisé.', 403);
+   141→      const history = JSON.parse(app.history || '[]');
+   142→      history.push({ status: p.status, date: today() });
+   143→      await db.application.update({ where: { id: app.id }, data: { status: String(p.status), updatedAt: 'À l\u2019instant', history: J(history) } });
+   144→      await audit(u.name, `Statut candidature ${app.id} → ${p.status}`, 'Recrutement');
+   145→      break;
+   146→    }
+   147→
+   148→    /* ── Événements ── */
+   149→    case 'createEvent': {
+   150→      await db.courtEvent.create({ data: {
+   151→        id: String(p.id ?? `e-${Date.now()}`), title: String(p.title ?? 'Événement'), kind: String(p.kind ?? 'Tournoi 3x3'),
+   152→        city: String(p.city ?? ''), country: String(p.country ?? 'Bénin'), venue: String(p.venue ?? ''),
+   153→        date: String(p.date ?? ''), endDate: String(p.endDate ?? ''), participants: 0,
+   154→        capacity: Number(p.capacity ?? 0), description: String(p.description ?? ''),
+   155→        program: J(p.program), price: String(p.price ?? 'Gratuit'), ageRange: String(p.ageRange ?? ''),
+   156→        status: 'Ouvert', image: String(p.image ?? '/img/event-arena.jpg'), organizerId: u.id, organizer: u.name,
+   157→      } });
+   158→      await audit(u.name, `Création de l\u2019événement « ${p.title} »`, 'Événements');
+   159→      break;
+   160→    }
+   161→    case 'registerEvent': {
+   162→      const pl = await myPlayer(u.id);
+   163→      const ev = await db.courtEvent.findUnique({ where: { id: p.eventId } });
+   164→      if (!ev) throw new ActionError('Événement introuvable.', 404);
+   165→      const dup = await db.eventRegistration.findFirst({ where: { eventId: ev.id, playerId: pl.id } });
+   166→      if (dup) break;
+   167→      if (ev.participants >= ev.capacity) throw new ActionError('Événement complet.', 409);
+   168→      await db.eventRegistration.create({ data: {
+   169→        id: `er-${Date.now()}`, eventId: ev.id, eventTitle: ev.title, playerId: pl.id, playerName: pl.name,
+   170→        status: 'En attente', registeredAt: 'À l\u2019instant', consent: !pl.isMinor,
+   171→      } });
+   172→      await db.courtEvent.update({ where: { id: ev.id }, data: { participants: { increment: 1 } } });
+   173→      await audit(u.name, `Inscription à « ${ev.title} »`, 'Événements');
+   174→      break;
+   175→    }
+   176→    case 'setRegistrationStatus': {
+   177→      const reg = await db.eventRegistration.findUnique({ where: { id: p.regId } });
+   178→      if (!reg) throw new ActionError('Inscription introuvable.', 404);
+   179→      const ev = await db.courtEvent.findUnique({ where: { id: reg.eventId } });
+   180→      if (!ev || (ev.organizerId !== u.id && !isStaff)) throw new ActionError('Non autorisé.', 403);
+   181→      await db.eventRegistration.update({ where: { id: reg.id }, data: { status: String(p.status) } });
+   182→      break;
+   183→    }
+   184→
+   185→    /* ── Favoris & suivis ── */
+   186→    case 'toggleFavorite': {
+   187→      const key = { userId: u.id, playerId: String(p.playerId) };
+   188→      if (await db.favorite.findUnique({ where: { userId_playerId: key } })) await db.favorite.delete({ where: { userId_playerId: key } });
+   189→      else await db.favorite.create({ data: key });
+   190→      break;
+   191→    }
+   192→    case 'toggleFollow': {
+   193→      const key = { userId: u.id, orgId: String(p.orgId) };
+   194→      if (await db.follow.findUnique({ where: { userId_orgId: key } })) await db.follow.delete({ where: { userId_orgId: key } });
+   195→      else await db.follow.create({ data: key });
+   196→      break;
+   197→    }
+   198→
+   199→    /* ── Messagerie ── */
+   200→    case 'sendMessage': {
+   201→      const conv = await db.conversation.findUnique({ where: { id: p.convId } });
+   202→      if (!conv) throw new ActionError('Conversation introuvable.', 404);
+   203→      const parts = JSON.parse(conv.participants || '[]') as string[];
+   204→      if (!parts.includes(u.id) && !parts.includes('me')) throw new ActionError('Conversation non autorisée.', 403);
+   205→      const messages = JSON.parse(conv.messages || '[]');
+   206→      messages.push({ from: u.name, body: String(p.body ?? ''), time: now(), me: true });
+   207→      await db.conversation.update({ where: { id: conv.id }, data: { messages: J(messages), unread: false, updatedAt: 'À l\u2019instant' } });
+   208→      break;
+   209→    }
+   210→    case 'startConversation': {
+   211→      const target = await db.player.findFirst({ where: { name: String(p.targetName ?? '') } });
+   212→      const targetUserId = target?.ownerId ?? null;
+   213→      await db.conversation.create({ data: {
+   214→        id: `c-${Date.now()}`,
+   215→        participants: J(targetUserId ? [u.id, targetUserId] : [u.id]),
+   216→        participantNames: J([u.name, String(p.targetName ?? '')]),
+   217→        subject: String(p.subject ?? 'Contact CourtLink'),
+   218→        messages: J([{ from: u.name, body: String(p.body ?? ''), time: now(), me: true }]),
+   219→        unread: false, updatedAt: 'À l\u2019instant',
+   220→      } });
+   221→      await audit(u.name, `Nouveau message à ${p.targetName}`, 'Messagerie');
+   222→      break;
+   223→    }
+   224→    case 'markConversationRead': {
+   225→      const conv = await db.conversation.findUnique({ where: { id: p.convId } });
+   226→      if (conv) await db.conversation.update({ where: { id: conv.id }, data: { unread: false } });
+   227→      break;
+   228→    }
+   229→
+   230→    /* ── Notifications ── */
+   231→    case 'markAllNotificationsRead':
+   232→      await db.notification.updateMany({ where: { userId: u.id }, data: { read: true } });
+   233→      break;
+   234→    case 'markNotificationRead':
+   235→      await db.notification.updateMany({ where: { id: String(p.id), userId: u.id }, data: { read: true } });
+   236→      break;
+   237→
+   238→    /* ── Vérifications & modération ── */
+   239→    case 'decideVerification': {
+   240→      if (!['moderator', 'admin'].includes(u.role)) throw new ActionError('Réservé à la modération.', 403);
+   241→      const v = await db.verification.findUnique({ where: { id: p.id } });
+   242→      if (!v) throw new ActionError('Dossier introuvable.', 404);
+   243→      await db.verification.update({ where: { id: v.id }, data: { status: String(p.decision), justification: String(p.justification ?? ''), reviewer: u.name } });
+   244→      if (p.decision === 'Approuvée') {
+   245→        if (v.subjectType === 'Organisation') await db.organization.update({ where: { id: v.subjectId }, data: { verified: true, verificationStatus: 'vérifiée' } }).catch(() => {});
+   246→        if (v.subjectType === 'Joueur') await db.player.update({ where: { id: v.subjectId }, data: { verified: true } }).catch(() => {});
+   247→      }
+   248→      if (p.decision === 'Correction demandée' && v.subjectType === 'Organisation') {
+   249→        await db.organization.update({ where: { id: v.subjectId }, data: { verificationStatus: 'correction demandée' } }).catch(() => {});
+   250→      }
+   251→      await audit(u.name, `Vérification ${v.id} : ${p.decision} — ${v.subject}`, 'Vérification');
+   252→      break;
+   253→    }
+   254→    case 'submitVerification': {
+   255→      const ids: string[] = [];
+   256→      const pl = await db.player.findFirst({ where: { ownerId: u.id } });
+   257→      if (pl) ids.push(pl.id);
+   258→      const org = await db.organization.findFirst({ where: { ownerId: u.id } });
+   259→      if (org) ids.push(org.id);
+   260→      await db.verification.create({ data: {
+   261→        id: `v-${Date.now()}`, subject: String(p.subject ?? u.name), subjectType: String(p.subjectType ?? 'Joueur'),
+   262→        subjectId: ids[0] ?? `u-${u.id}`, status: 'En attente', submitted: 'À l\u2019instant', documents: J(p.documents),
+   263→      } });
+   264→      await audit(u.name, `Demande de vérification : ${p.subject}`, 'Vérification');
+   265→      break;
+   266→    }
+   267→    case 'decideReport': {
+   268→      if (!isStaff) throw new ActionError('Réservé à la modération.', 403);
+   269→      await db.report.update({ where: { id: p.id }, data: { status: String(p.decision), action: p.action ? String(p.action) : null } }).catch(() => {});
+   270→      await audit(u.name, `Signalement ${p.id} → ${p.decision}`, 'Modération');
+   271→      break;
+   272→    }
+   273→    case 'hideContent': {
+   274→      await db.hiddenContent.upsert({ where: { userId_contentId: { userId: u.id, contentId: String(p.contentId) } }, update: {}, create: { userId: u.id, contentId: String(p.contentId) } });
+   275→      await audit(u.name, `Masquage du contenu ${p.contentId}`, 'Modération');
+   276→      break;
+   277→    }
+   278→    case 'unhideContent': {
+   279→      await db.hiddenContent.deleteMany({ where: { userId: u.id, contentId: String(p.contentId) } });
+   280→      break;
+   281→    }
+   282→    case 'suspendAccount': {
+   283→      if (!isStaff) throw new ActionError('Réservé à la modération.', 403);
+   284→      await db.suspendedAccount.upsert({ where: { accountId: String(p.accountId) }, update: {}, create: { accountId: String(p.accountId), name: String(p.name ?? '') } });
+   285→      await db.player.update({ where: { id: String(p.accountId) }, data: { suspended: true } }).catch(() => {});
+   286→      await db.organization.update({ where: { id: String(p.accountId) }, data: { suspended: true } }).catch(() => {});
+   287→      await audit(u.name, `Suspension du compte ${p.name} (${p.accountId})`, 'Administration');
+   288→      break;
+   289→    }
+   290→    case 'unsuspendAccount': {
+   291→      if (!isStaff) throw new ActionError('Réservé à la modération.', 403);
+   292→      await db.suspendedAccount.deleteMany({ where: { accountId: String(p.accountId) } });
+   293→      await db.player.update({ where: { id: String(p.accountId) }, data: { suspended: false } }).catch(() => {});
+   294→      await db.organization.update({ where: { id: String(p.accountId) }, data: { suspended: false } }).catch(() => {});
+   295→      await audit(u.name, `Réactivation du compte ${p.accountId}`, 'Administration');
+   296→      break;
+   297→    }
+   298→
+   299→    /* ── Scouting & notes ── */
+   300→    case 'addScoutingReport': {
+   301→      await db.scoutingReport.create({ data: {
+   302→        id: `sr-${Date.now()}`, playerId: String(p.playerId ?? ''), playerName: String(p.playerName ?? ''),
+   303→        scout: u.name, strengths: J(p.strengths), improvements: J(p.improvements),
+   304→        confidence: String(p.confidence ?? 'Moyenne'), observations: String(p.observations ?? ''),
+   305→        date: today(), rating: Number(p.rating ?? 0),
+   306→      } });
+   307→      await audit(u.name, `Rapport de scouting sur ${p.playerName}`, 'Scouting');
+   308→      break;
+   309→    }
+   310→    case 'addPrivateNote': {
+   311→      await db.privateNote.create({ data: {
+   312→        id: `pn-${Date.now()}`, userId: u.id, targetId: String(p.targetId ?? ''), targetName: String(p.targetName ?? ''),
+   313→        body: String(p.body ?? ''), date: today(), author: u.name,
+   314→      } });
+   315→      break;
+   316→    }
+   317→    case 'addSavedSearch': {
+   318→      await db.savedSearch.create({ data: {
+   319→        id: `ss-${Date.now()}`, userId: u.id, name: String(p.name ?? 'Recherche'), query: String(p.query ?? ''),
+   320→        filters: J(p.filters ?? {}), alerts: true,
+   321→      } });
+   322→      break;
+   323→    }
+   324→    case 'removeSavedSearch':
+   325→      await db.savedSearch.deleteMany({ where: { id: String(p.id), userId: u.id } });
+   326→      break;
+   327→
+   328→    /* ── Consentements (mineurs) ── */
+   329→    case 'decideConsent': {
+   330→      const c = await db.consentRequest.findUnique({ where: { id: p.id } });
+   331→      if (!c || c.guardianId !== u.id) throw new ActionError('Consentement non autorisé.', 403);
+   332→      await db.consentRequest.update({ where: { id: c.id }, data: { status: String(p.decision) } });
+   333→      await audit(u.name, `Consentement ${c.id} : ${p.decision}`, 'Consentements');
+   334→      break;
+   335→    }
+   336→    case 'requestContact': {
+   337→      const pl = await db.player.findUnique({ where: { id: String(p.playerId) } });
+   338→      await db.consentRequest.create({ data: {
+   339→        id: `cr-${Date.now()}`, guardianId: pl?.guardianId ?? '', playerId: String(p.playerId ?? ''),
+   340→        playerName: String(p.playerName ?? ''), requester: u.name, kind: String(p.kind ?? 'Contact'),
+   341→        status: 'En attente', date: 'À l\u2019instant',
+   342→      } });
+   343→      await audit(u.name, `Demande de contact (${p.kind}) sur ${p.playerName}`, 'Consentements');
+   344→      break;
+   345→    }
+   346→
+   347→    /* ── Facturation (paiements toujours simulés — aucun encaissement réel) ── */
+   348→    case 'checkout': {
+   349→      const invoice = `CL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+   350→      await db.payment.create({ data: {
+   351→        id: `pay-${Date.now()}`, userId: u.id, user: u.name, plan: String(p.planName ?? ''),
+   352→        amount: String(p.amount ?? ''), method: `${String(p.method ?? '')} (simulé)`,
+   353→        status: 'Confirmé', date: today(), invoice,
+   354→      } });
+   355→      await db.user.update({ where: { id: u.id }, data: {
+   356→        subPlanId: String(p.planId ?? 'free'), subStatus: 'Actif',
+   357→        subRenews: String(p.renews ?? '30 juin 2027'), subSince: today(),
+   358→      } });
+   359→      await audit(u.name, `Abonnement ${p.planName} activé (${invoice})`, 'Facturation');
+   360→      await notify(u.id, 'Abonnement activé', `${p.planName} est actif — paiement simulé, aucun encaissement réel.`, 'success');
+   361→      break;
+   362→    }
+   363→    case 'cancelSubscription':
+   364→      await db.user.update({ where: { id: u.id }, data: { subStatus: 'Expiré', subRenews: '—' } });
+   365→      await audit(u.name, 'Résiliation d\u2019abonnement', 'Facturation');
+   366→      break;
+   367→    case 'updatePlan': {
+   368→      if (u.role !== 'admin') throw new ActionError('Réservé à l\u2019administration.', 403);
+   369→      await db.plan.update({ where: { id: String(p.id) }, data: serializePatch(p.patch, PLAN_FIELDS) }).catch(() => {});
+   370→      await audit(u.name, `Modification du plan ${p.id}`, 'Administration');
+   371→      break;
+   372→    }
+   373→    case 'resolvePayment': {
+   374→      if (!isStaff) throw new ActionError('Réservé au support.', 403);
+   375→      await db.payment.update({ where: { id: String(p.id) }, data: { status: String(p.status) } }).catch(() => {});
+   376→      await audit(u.name, `Paiement ${p.id} → ${p.status}`, 'Facturation');
+   377→      break;
+   378→    }
+   379→
+   380→    /* ── Support ── */
+   381→    case 'createTicket': {
+   382→      await db.ticket.create({ data: {
+   383→        id: `t-${Date.now()}`, subject: String(p.subject ?? 'Demande'), requester: u.name,
+   384→        topic: String(p.topic ?? ''), status: 'Ouvert', priority: 'Normale', opened: 'À l\u2019instant',
+   385→        messages: J([{ from: 'user', body: String(p.body ?? ''), time: 'À l\u2019instant' }]),
+   386→      } });
+   387→      await audit(u.name, `Nouveau ticket : ${p.subject}`, 'Support');
+   388→      break;
+   389→    }
+   390→    case 'replyTicket': {
+   391→      const t = await db.ticket.findUnique({ where: { id: p.id } });
+   392→      if (!t || (t.requester !== u.name && !isStaff)) throw new ActionError('Ticket non autorisé.', 403);
+   393→      const messages = JSON.parse(t.messages || '[]');
+   394→      messages.push({ from: isStaff && t.requester !== u.name ? 'support' : 'user', body: String(p.body ?? ''), time: 'À l\u2019instant' });
+   395→      await db.ticket.update({ where: { id: t.id }, data: { messages: J(messages), status: isStaff && t.requester !== u.name ? 'En cours' : t.status } });
+   396→      break;
+   397→    }
+   398→    case 'setTicketStatus': {
+   399→      if (!isStaff) throw new ActionError('Réservé au support.', 403);
+   400→      await db.ticket.update({ where: { id: String(p.id) }, data: { status: String(p.status) } }).catch(() => {});
+   401→      await audit(u.name, `Ticket ${p.id} → ${p.status}`, 'Support');
+   402→      break;
+   403→    }
+   404→
+   405→    /* ── Staff & super administration ── */
+   406→    case 'setStaffRole': {
+   407→      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+   408→      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+   409→      const newRole = String(p.role);
+   410→      if (!['admin', 'moderator', 'support', 'visitor'].includes(newRole)) throw new ActionError('Rôle cible invalide.', 400);
+   411→      const targetUser = await db.user.findUnique({ where: { id: String(p.userId) } });
+   412→      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+   413→      if (targetUser.id === u.id && newRole !== 'admin') throw new ActionError('Vous ne pouvez pas retirer vos propres accès.', 400);
+   414→      if (targetUser.isSuperAdmin && newRole === 'visitor') {
+   415→        const supers = await db.user.count({ where: { isSuperAdmin: true } });
+   416→        if (supers <= 1) throw new ActionError('Impossible de retirer le dernier super administrateur.', 400);
+   417→      }
+   418→      await db.user.update({
+   419→        where: { id: targetUser.id },
+   420→        data: newRole === 'visitor' ? { role: 'visitor', isSuperAdmin: false } : { role: newRole },
+   421→      });
+   422→      await audit(u.name, `Rôle staff : ${targetUser.email} → ${newRole}`, 'Administration');
+   423→      await notify(targetUser.id, 'Vos accès ont été mis à jour', newRole === 'visitor' ? 'Votre accès staff a été retiré par un super administrateur.' : `Votre nouveau rôle : ${newRole}.`, newRole === 'visitor' ? 'warning' : 'success');
+   424→      break;
+   425→    }
+   426→    case 'setSuperAdmin': {
+   427→      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+   428→      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+   429→      if (String(p.userId) === u.id) throw new ActionError('Vous ne pouvez pas modifier votre propre statut super admin.', 400);
+   430→      const targetUser = await db.user.findUnique({ where: { id: String(p.userId) } });
+   431→      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+   432→      const on = !!p.on;
+   433→      if (!on) {
+   434→        const supers = await db.user.count({ where: { isSuperAdmin: true } });
+   435→        if (supers <= 1) throw new ActionError('Impossible de retirer le dernier super administrateur.', 400);
+   436→      }
+   437→      await db.user.update({
+   438→        where: { id: targetUser.id },
+   439→        data: { isSuperAdmin: on, ...(on && !['admin', 'moderator', 'support'].includes(targetUser.role) ? { role: 'admin' } : {}) },
+   440→      });
+   441→      await audit(u.name, `Super admin ${on ? 'accordé' : 'retiré'} : ${targetUser.email}`, 'Administration');
+   442→      await notify(targetUser.id, on ? 'Statut super administrateur accordé' : 'Statut super administrateur retiré', on ? 'Un super administrateur vous a nommé super administrateur.' : 'Votre statut de super administrateur a été retiré.', on ? 'success' : 'warning');
+   443→      break;
+   444→    }
+   445→
+   446→    /* ── Données de démonstration & sécurité ── */
+   447→    case 'loadDemoData': {
+   448→      if (u.role !== 'admin') throw new ActionError('Réservé aux administrateurs.', 403);
+   449→      const users = await ensureDemoUsers(db);
+   450→      const content = await ensureDemoContent(db, users.userIds);
+   451→      await audit(u.name, `Données de démo chargées (+${users.created.length} compte(s), contenu complété)`, 'Administration');
+   452→      return { ok: true, accountsCreated: users.created.length, accountsTotal: users.total, content };
+   453→    }
+   454→
+   455→    case 'setDemoAccounts': {
+   456→      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+   457→      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+   458→      const on = !!p.on;
+   459→      const demoCount = await db.user.count({ where: { email: { endsWith: DEMO_DOMAIN } } });
+   460→      if (demoCount === 0) throw new ActionError('Aucun compte de démonstration en base — chargez d’abord les données de démo.', 400);
+   461→      // Les mots de passe démo sont remplacement par des hashes aléatoires : la
+   462→      // connexion par mot de passe devient impossible, l’accès passe uniquement
+   463→      // par /api/demo-login (session visiteur) quand le mode est ouvert.
+   464→      const hash = lockedHash();
+   465→      const demoRows = await db.user.findMany({ where: { email: { endsWith: DEMO_DOMAIN } }, select: { id: true } });
+   466→      for (const row of demoRows) {
+   467→        await db.user.update({ where: { id: row.id }, data: { passwordHash: hash } });
+   468→      }
+   469→      await audit(u.name, on ? `Comptes démo : ACCÈS OUVERT (${demoCount} comptes)` : 'Comptes démo : ACCÈS FERMÉ', 'Sécurité');
+   470→      return { ok: true, demoAccountsActive: on, accounts: demoCount };
+   471→    }
+   472→
+   473→    case 'resetUserPassword': {
+   474→      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+   475→      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+   476→      const targetUser = await db.user.findUnique({ where: { id: String(p.userId ?? '') } });
+   477→      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+   478→      if (targetUser.id === u.id) throw new ActionError('Pour votre propre compte, utilisez le changement de mot de passe personnel.', 400);
+   479→      const pwd = String(p.password ?? '');
+   480→      if (pwd.length < 8) throw new ActionError('Mot de passe trop court : 8 caractères minimum.', 400);
+   481→      await db.user.update({ where: { id: targetUser.id }, data: { passwordHash: bcrypt.hashSync(pwd, 10) } });
+   482→      await audit(u.name, `Mot de passe réinitialisé : ${targetUser.email}`, 'Sécurité');
+   483→      await notify(targetUser.id, 'Mot de passe réinitialisé', 'Un super administrateur a défini un nouveau mot de passe pour votre compte. Contactez l’équipe si vous n’êtes pas à l’origine de cette demande.', 'warning');
+   484→      return { ok: true, email: targetUser.email };
+   485→    }
+   486→
+   487→    case 'changeOwnPassword': {
+   488→      const me = await db.user.findUnique({ where: { id: u.id } });
+   489→      if (!me) throw new ActionError('Compte introuvable.', 404);
+   490→      if (!bcrypt.compareSync(String(p.current ?? ''), me.passwordHash)) throw new ActionError('Mot de passe actuel incorrect.', 403);
+   491→      const next = String(p.next ?? '');
+   492→      if (next.length < 8) throw new ActionError('Nouveau mot de passe trop court : 8 caractères minimum.', 400);
+   493→      await db.user.update({ where: { id: me.id }, data: { passwordHash: bcrypt.hashSync(next, 10) } });
+   494→      await audit(me.name, 'Mot de passe personnel modifié', 'Sécurité');
+   495→      return { ok: true };
+   496→    }
+   497→
+   498→    /* ── Paramètres plateforme ── */
+   499→    case 'updateSettings': {
+   500→      if (u.role !== 'admin') throw new ActionError('Réservé à l\u2019administration.', 403);
+   501→      const data: Record<string, unknown> = {};
+   502→      const keys = ['brandName', 'tagline', 'accentColor', 'maintenance', 'newRegistrations', 'autoVerifyPlayers', 'maxFreeApplications', 'featuredSlots'];
+   503→      for (const k of keys) if (k in p) data[k] = p[k];
+   504→      await db.platformSettings.upsert({
+   505→        where: { id: 'singleton' }, update: data,
+   506→        create: { id: 'singleton', ...data },
+   507→      });
+   508→      await audit(u.name, `Paramètres mis à jour : ${Object.keys(data).join(', ')}`, 'Administration');
+   509→      break;
+   510→    }
+   511→
+   512→    default:
+   513→      throw new ActionError(`Action inconnue : ${action}`, 404);
+   514→  }
+   515→
+   516→  return { ok: true };
+   517→}
+   518→
