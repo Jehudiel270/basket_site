@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, ChevronLeft, ShieldCheck, Smartphone, Banknote, CreditCard, BadgePercent, RotateCcw } from 'lucide-react';
+import { Check, X, ChevronLeft, ShieldCheck, Smartphone, Banknote, CreditCard, BadgePercent, RotateCcw, Loader2 } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { launchFedapayCheckout } from '@/lib/billing-client';
 import { SectionHead } from '@/components/common/Bits';
 import { cn } from '@/lib/utils';
 
@@ -13,13 +14,28 @@ export function PricingPage() {
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [method, setMethod] = useState('Mobile Money');
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [paying, setPaying] = useState(false);
+
+  /** Paiement réel via FedaPay si configuré (mode API + clés), sinon tunnel de démonstration. */
+  const pay = async () => {
+    if (!plan || paying) return;
+    setPaying(true);
+    try {
+      const redirected = await launchFedapayCheckout(plan.id, annual);
+      if (redirected) return; // navigation vers la page de paiement FedaPay
+      setStep(3);
+      checkout(plan, method);
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const plan = plans.find(p => p.id === checkoutPlan);
   const price = plan ? (annual ? plan.price * 10 : plan.price) : 0;
 
   const faq = [
     { q: 'Un abonnement garantit-il d\'être recruté ?', a: 'Non. Les offres achètent uniquement des fonctionnalités (visibilité, outils de suivi, recherches avancées). Aucune sélection, bourse ou contrat n\'est lié à un paiement.' },
-    { q: 'Puis-je payer en Mobile Money ?', a: 'Le prototype simule MTN MoMo, Moov Money et Orange Money. Les paiements réels seront intégrés avant le lancement commercial, avec facturation en FCFA.' },
+    { q: 'Puis-je payer en Mobile Money ?', a: 'Oui : les paiements passent par FedaPay, l\u2019agr\u00e9gateur ouest-africain — MTN MoMo, Moov Money, Orange Money, Wave et cartes Visa/Mastercard, factur\u00e9s en FCFA. En mode d\u00e9monstration sans cl\u00e9s FedaPay configur\u00e9es, le tunnel reste simul\u00e9.' },
     { q: 'Le compte joueur est-il vraiment gratuit ?', a: 'Oui : profil complet, 3 candidatures par mois et messagerie avec les comptes vérifiés, sans carte bancaire.' },
     { q: 'Comment modifier mon offre ?', a: 'Depuis votre espace, rubrique Abonnement : la migration prend effet immédiatement dans la démonstration.' },
   ];
@@ -125,7 +141,7 @@ export function PricingPage() {
                     <div className="flex justify-between border-t border-border pt-2 font-bold"><span>Total</span><span className="tnum text-[var(--ball)]">{price.toLocaleString('fr-FR')} FCFA</span></div>
                   </div>
                   <button onClick={() => setStep(2)} className="btn-ball w-full">Passer au paiement</button>
-                  <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck size={12} /> Simulation — aucune transaction réelle ne sera effectuée</p>
+                  <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck size={12} /> Paiement sécurisé via FedaPay — Mobile Money et cartes, en FCFA</p>
                 </div>
               )}
               {step === 2 && (
@@ -151,9 +167,12 @@ export function PricingPage() {
                     <input placeholder="4242 4242 4242 4242" className="mt-3 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-[var(--ball)]" />
                   )}
                   <div className="mt-4 flex gap-2">
-                    <button onClick={() => setStep(1)} className="btn-ghosty flex-1">Retour</button>
-                    <button onClick={() => { setStep(3); checkout(plan, method); }} className="btn-ball flex-1">Payer {price.toLocaleString('fr-FR')} F</button>
+                    <button onClick={() => setStep(1)} className="btn-ghosty flex-1" disabled={paying}>Retour</button>
+                    <button onClick={pay} className="btn-ball flex-1" disabled={paying}>
+                      {paying ? <span className="inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Ouverture…</span> : `Payer ${price.toLocaleString('fr-FR')} F`}
+                    </button>
                   </div>
+                  {paying && <p className="mt-2 text-center text-[11px] text-muted-foreground">Connexion sécurisée à FedaPay en cours…</p>}
                 </div>
               )}
               {step === 3 && (

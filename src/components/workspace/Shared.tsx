@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
+import { launchFedapayCheckout } from '@/lib/billing-client';
 import { WorkspaceHeader } from './Shell';
 import { EmptyState } from '@/components/common/Bits';
 import { cn } from '@/lib/utils';
@@ -157,7 +158,15 @@ export function SubscriptionView() {
                 {subscription?.planId === p.id ? (
                   <p className="mt-2 text-center text-xs font-semibold text-green-400">Offre active</p>
                 ) : (
-                  <button onClick={() => checkout(p, 'Mobile Money')} className="btn-ghosty mt-2 w-full !py-1.5 text-xs">Souscrire (paiement simulé)</button>
+                  <button
+                    onClick={async () => {
+                      const redirected = await launchFedapayCheckout(p.id, false);
+                      if (!redirected) checkout(p, 'Mobile Money');
+                    }}
+                    className="btn-ghosty mt-2 w-full !py-1.5 text-xs"
+                  >
+                    Souscrire via FedaPay
+                  </button>
                 )}
               </div>
             ))}

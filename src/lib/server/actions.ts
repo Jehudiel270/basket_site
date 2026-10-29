@@ -344,7 +344,7 @@ export async function applyAction(user: SessionUser | null, action: string, payl
       break;
     }
 
-    /* ── Facturation (paiements toujours simulés — aucun encaissement réel) ── */
+    /* ── Facturation (tunnel de démonstration ; encaissement réel via FedaPay → /api/billing/*) ── */
     case 'checkout': {
       const invoice = `CL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       await db.payment.create({ data: {
