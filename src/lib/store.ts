@@ -14,7 +14,7 @@ import {
   seedReports, seedTickets, seedPayments, defaultPlans, seedAuditLogs,
   seedScoutingReports, seedSavedSearches, seedPrivateNotes, seedConsentRequests,
 } from './demo-data';
-import { isApiMode, pushAction } from './api-mode';
+import { isApiMode, pushAction, pushActionResult, fetchState } from './api-mode';
 
 let auditCounter = 100;
 let notifCounter = 100;
@@ -50,6 +50,12 @@ export interface CourtLinkStore extends DemoState {
   // staff (gestion super admin)
   setStaffRole: (userId: string, newRole: StaffMember['role']) => void;
   setSuperAdmin: (userId: string, on: boolean) => void;
+  // données de démonstration & sécurité (console admin)
+  loadDemoData: () => Promise<{ accountsCreated: number; content: Record<string, number> } | null>;
+  setDemoAccounts: (on: boolean) => void;
+  demoLogin: (role: Role) => Promise<boolean>;
+  resetUserPassword: (userId: string, password: string) => Promise<boolean>;
+  changeOwnPassword: (current: string, next: string) => Promise<boolean>;
   // messaging
   sendMessage: (convId: string, body: string) => void;
   startConversation: (targetName: string, subject: string, body: string) => void;
@@ -121,6 +127,7 @@ const initialData = (): Omit<DemoState, 'role' | 'loggedIn' | 'currentUserId'> =
   hiddenContent: [],
   suspendedAccounts: [],
   isSuperAdmin: false,
+  demoAccountsActive: false,
   staff: [
     { id: 'u1', name: 'Admin général', email: 'admin@demo.courtlink', role: 'admin', isSuperAdmin: true },
     { id: 'u2', name: 'Camille H.', email: 'moderation@demo.courtlink', role: 'moderator', isSuperAdmin: false },
@@ -427,6 +434,110 @@ export const useCourtLink = create<CourtLinkStore>()(
         if (isApiMode()) void pushAction('setSuperAdmin', { userId, on });
         toast.success(on ? `${target.name} est maintenant super administrateur.` : `Le statut super admin de ${target.name} a été retiré.`);
         get().addAudit(`Super admin ${on ? 'accordé' : 'retiré'} : ${target.name}`, 'Administration');
+      },
+
+      loadDemoData: async () => {
+        if (isApiMode()) {
+          const r = await pushActionResult<{ accountsCreated: number; accountsTotal: number; content: Record<string, number> }>('loadDemoData', {});
+          if (!r.ok) {
+            toast.error(r.error ?? 'Chargement des données de démo impossible.');
+            return null;
+          }
+          const d = r.data!;
+          const parts = Object.entries(d.content ?? {}).map(([k, v]) => `+${v} ${k}`).join(', ');
+          toast.success(`Données de démo chargées : +${d.accountsCreated} compte(s)${parts ? ' · ' + parts : ''}.`);
+          get().addAudit(`Données de démo chargées (+${d.accountsCreated} compte(s))`, 'Administration');
+          return { accountsCreated: d.accountsCreated, content: d.content ?? {} };
+        }
+        toast('Mode démonstration local : les données de démo sont déjà en mémoire.');
+        return { accountsCreated: 0, content: {} };
+      },
+
+      setDemoAccounts: (on) => {
+        if (isApiMode()) {
+          void pushActionResult<{ demoAccountsActive: boolean }>('setDemoAccounts', { on }).then(r => {
+            if (!r.ok) {
+              toast.error(r.error ?? 'Action refusée.');
+              return;
+            }
+            set({ demoAccountsActive: r.data?.demoAccountsActive ?? on });
+            toast.success(on ? 'Accès démo ouverts aux visiteurs (sessions de 12 h).' : 'Accès démo fermés — les comptes de démonstration sont verrouillés.');
+            get().addAudit(on ? 'Comptes démo : ACCÈS OUVERT' : 'Comptes démo : ACCÈS FERMÉ', 'Sécurité');
+          });
+          return;
+        }
+        set({ demoAccountsActive: on });
+        toast.success(on ? 'Accès démo ouverts (mode local).' : 'Accès démo fermés (mode local).');
+        get().addAudit(on ? 'Comptes démo : ACCÈS OUVERT' : 'Comptes démo : ACCÈS FERMÉ', 'Sécurité');
+      },
+
+      demoLogin: async (role) => {
+        if (!isApiMode()) {
+          get().login(role);
+          return true;
+        }
+        try {
+          const res = await fetch('/api/demo-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            toast.error((data as { error?: string }).error ?? 'Connexion démo indisponible.');
+            return false;
+          }
+          const st = await fetchState<DemoState>();
+          if (st) useCourtLink.setState(s => ({ ...s, ...st, dataSource: 'api', hydrated: true }));
+          else get().enterApiSession({ id: '', name: (data as { name?: string }).name ?? 'Démo', role });
+          toast.success(`Connecté en démonstration — ${(data as { name?: string }).name ?? role}`);
+          return true;
+        } catch {
+          toast.error('Serveur indisponible.');
+          return false;
+        }
+      },
+
+      resetUserPassword: async (userId, password) => {
+        const target = get().staff.find(m => m.id === userId);
+        if (isApiMode()) {
+          const r = await pushActionResult<{ email: string }>('resetUserPassword', { userId, password });
+          if (!r.ok) {
+            toast.error(r.error ?? 'Réinitialisation refusée.');
+            return false;
+          }
+          toast.success(`Mot de passe réinitialisé pour ${target?.name ?? r.data?.email ?? userId}.`);
+          get().addAudit(`Mot de passe réinitialisé : ${target?.name ?? userId}`, 'Sécurité');
+          return true;
+        }
+        if (password.length < 8) {
+          toast.error('Mot de passe trop court : 8 caractères minimum.');
+          return false;
+        }
+        toast.success(`Mot de passe réinitialisé pour ${target?.name ?? userId} (mode local).`);
+        get().addAudit(`Mot de passe réinitialisé : ${target?.name ?? userId}`, 'Sécurité');
+        return true;
+      },
+
+      changeOwnPassword: async (current, next) => {
+        if (next.length < 8) {
+          toast.error('Nouveau mot de passe trop court : 8 caractères minimum.');
+          return false;
+        }
+        if (next === current) {
+          toast.error('Le nouveau mot de passe doit être différent de l’actuel.');
+          return false;
+        }
+        if (isApiMode()) {
+          const r = await pushActionResult('changeOwnPassword', { current, next });
+          if (!r.ok) {
+            toast.error(r.error ?? 'Changement refusé.');
+            return false;
+          }
+        }
+        toast.success('Votre mot de passe a été mis à jour.');
+        get().addAudit('Mot de passe personnel modifié', 'Sécurité');
+        return true;
       },
 
       addScoutingReport: (r) => {

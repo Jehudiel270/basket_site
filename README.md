@@ -52,6 +52,7 @@ npm run dev
 | `NEXTAUTH_SECRET` | secret de signature des sessions JWT |
 | `NEXT_PUBLIC_DATA_SOURCE` | `demo` ou `api` |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | upload photos / vidéos / documents |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | compte super admin créé par le seed (aucune valeur par défaut pour le mot de passe) |
 
 ## Scripts d'exploitation (`scripts/`)
 
@@ -61,8 +62,13 @@ npm run dev
 - `e2e-real.sh` — suite E2E API complète (auth, snapshot, mutations, sécurité, Cloudinary)
 - `cleanup-e2e.ts` — supprime les comptes de test
 
-## Comptes de démonstration (seed)
+## Comptes de démonstration & sécurité
 
-`admin@courtlink.bj` (admin réel) · `club@demo.courtlink` · `semevo@demo.courtlink` (joueur) ·
-`scout@demo.courtlink` · `events@demo.courtlink` … mot de passe démo : `demo1234`
-**À changer avant toute mise en ligne publique.**
+- **Admin réel** : `ADMIN_EMAIL` (par défaut `admin@courtlink.bj`) — mot de passe défini via la variable
+  d'environnement `ADMIN_PASSWORD` au seed, ou généré aléatoirement et affiché une seule fois dans la console.
+  Aucun mot de passe n'est stocké dans ce dépôt.
+- **Comptes de démonstration** (`…@demo.courtlink`) : créés avec des hachages aléatoires — aucune connexion
+  par mot de passe n'est possible. L'accès visiteur passe par `/api/demo-login` (sessions 12 h, débit limité),
+  ouvert ou fermé par un super administrateur depuis la console **Administrateurs** de l'espace de travail.
+- **Gestion des accès** : la console permet aussi de réinitialiser le mot de passe d'un membre du staff et de
+  modifier son propre mot de passe (aucun e-mail : choix produit « pas mail »).

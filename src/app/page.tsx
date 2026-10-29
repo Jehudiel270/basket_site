@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { SessionProvider, signIn, useSession } from 'next-auth/react';
-import { toast } from 'sonner';
+import { SessionProvider, useSession } from 'next-auth/react';
 import { useHashRoute } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { isApiMode, fetchState } from '@/lib/api-mode';
-import { demoAccounts } from '@/lib/permissions';
 import type { DemoState } from '@/lib/types';
 import { PublicHeader, PublicFooter } from '@/components/layout/Chrome';
 import { WorkspaceShell } from '@/components/workspace/Shell';
@@ -261,20 +259,18 @@ function NotFoundWorkspace() {
 
 /** Lanceur de comptes démo (page /demo) */
 function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
-  const { login, role, loggedIn, dataSource } = useCourtLink();
+  const { login, demoLogin, role, loggedIn, dataSource, demoAccountsActive } = useCourtLink();
 
   const enter = async (role: import('@/lib/types').Role, target: string) => {
     if (dataSource === 'api') {
-      const account = demoAccounts.find(a => a.role === role);
-      if (!account) return;
-      const res = await signIn('credentials', { redirect: false, email: account.email, password: 'demo1234' });
-      if (res?.error) { toast.error('Comptes démo absents de la base réelle — exécutez bun prisma/seed.ts.'); return; }
-      navigate(target);
+      const ok = await demoLogin(role);
+      if (ok) navigate(target);
     } else {
       login(role);
       navigate(target);
     }
   };
+  const locked = dataSource === 'api' && !demoAccountsActive;
   const accounts: { role: import('@/lib/types').Role; label: string; note: string; target: string }[] = [
     { role: 'player', label: 'Joueur', note: 'Sèmèvo H., arrière U21 vérifié', target: '/app' },
     { role: 'guardian', label: 'Parent / tuteur', note: 'Consentements & protection mineurs', target: '/app' },
@@ -290,6 +286,12 @@ function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
       {publicMode && (
         <SectionHead eyebrow="Mode démonstration" title="Tester chaque rôle en un clic" sub="Le changement de rôle est réservé à la démonstration et ne constitue pas une authentification sécurisée." />
       )}
+      {locked && (
+        <p className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4 text-xs leading-relaxed text-amber-300">
+          Les accès de démonstration sont actuellement <strong className="font-semibold">désactivés par l’administration</strong> de la plateforme.
+          Un super administrateur peut les ouvrir depuis la console « Administrateurs ».
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         {accounts.map(a => (
           <div key={a.role} className={cn('card-court flex items-center gap-4 p-5', role === a.role && loggedIn && 'border-[var(--ball)]')}>
@@ -300,7 +302,7 @@ function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
               <p className="font-display text-sm font-bold">{a.label}</p>
               <p className="text-xs text-muted-foreground">{a.note}</p>
             </div>
-            <button onClick={() => enter(a.role, a.target)} className="btn-ball !py-2 text-xs">Entrer</button>
+            <button disabled={locked} onClick={() => enter(a.role, a.target)} className="btn-ball !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40">Entrer</button>
           </div>
         ))}
       </div>

@@ -335,6 +335,7 @@ export interface DemoState {
   loggedIn: boolean;
   currentUserId: string;
   isSuperAdmin: boolean;
+  demoAccountsActive: boolean;
   staff: StaffMember[];
   players: Player[];
   organizations: Organization[];

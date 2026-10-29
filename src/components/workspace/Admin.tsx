@@ -5,6 +5,7 @@ import {
   Gauge, UsersRound, Building2, FileCheck2, UserRound, Target, CalendarDays,
   Flag, LifeBuoy, CreditCard, Newspaper, Bell, Settings, ScrollText, Crown,
   Plus, Save, Search, Ban, Check, X, ShieldCheck, Trash2, Download, Pencil, AlertTriangle,
+  Database, Lock, LockOpen, KeyRound,
 } from 'lucide-react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
@@ -446,8 +447,40 @@ export function AdminAudit() {
 }
 
 export function AdminAdmins() {
-  const { staff, isSuperAdmin, currentUserId, setStaffRole, setSuperAdmin } = useCourtLink();
-  const roleLabels: Record<string, string> = { admin: 'Administrateur', moderator: 'Modérateur', support: 'Support', visitor: 'Accès retiré' };
+  const { staff, isSuperAdmin, currentUserId, setStaffRole, setSuperAdmin,
+    loadDemoData, setDemoAccounts, demoAccountsActive, resetUserPassword, changeOwnPassword } = useCourtLink();
+  const roleLabels2: Record<string, string> = { admin: 'Administrateur', moderator: 'Modérateur', support: 'Support', visitor: 'Accès retiré' };
+  const [demoResult, setDemoResult] = useState<string>('');
+  const [busyDemo, setBusyDemo] = useState(false);
+  const [resetFor, setResetFor] = useState<string | null>(null);
+  const [resetPwd, setResetPwd] = useState('');
+  const [pwdCurrent, setPwdCurrent] = useState('');
+  const [pwdNext, setPwdNext] = useState('');
+  const [pwdConfirm, setPwdConfirm] = useState('');
+  const [pwdMsg, setPwdMsg] = useState('');
+
+  const doLoadDemo = async () => {
+    setBusyDemo(true);
+    const r = await loadDemoData();
+    setBusyDemo(false);
+    if (r) setDemoResult(r.accountsCreated > 0
+      ? `+${r.accountsCreated} compte(s) créé(s) · contenu : ${Object.entries(r.content).map(([k, v]) => `${v} ${k}`).join(', ') || 'déjà complet'}`
+      : `Comptes déjà présents (${r.content ? Object.entries(r.content).length : 0} bloc(s) complétés). Contenu existant conservé.`);
+  };
+
+  const doReset = async (userId: string) => {
+    if (resetPwd.length < 8) { setDemoResult('Mot de passe trop court (8 caractères minimum).'); return; }
+    const ok = await resetUserPassword(userId, resetPwd);
+    if (ok) { setResetFor(null); setResetPwd(''); setDemoResult(''); }
+  };
+
+  const doOwnPassword = async () => {
+    setPwdMsg('');
+    if (pwdNext !== pwdConfirm) { setPwdMsg('La confirmation ne correspond pas.'); return; }
+    const ok = await changeOwnPassword(pwdCurrent, pwdNext);
+    if (ok) { setPwdCurrent(''); setPwdNext(''); setPwdConfirm(''); setPwdMsg('Mot de passe mis à jour.'); }
+  };
+
   return (
     <div>
       <WorkspaceHeader
@@ -456,6 +489,46 @@ export function AdminAdmins() {
           ? 'Vous êtes super administrateur : vous nommez les administrateurs, les modérateurs, le support et les autres super administrateurs.'
           : 'Chaque administrateur dispose de permissions explicites. Seul un super administrateur peut nommer ou retirer des accès.'}
       />
+
+      {/* ── Données de démonstration & accès visiteur ── */}
+      <div className="card-court mb-6 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_oklch,var(--ball)_14%,transparent)] text-[var(--ball)]"><Database size={18} /></span>
+            <div>
+              <h2 className="font-display text-lg font-bold">Données de démonstration & accès visiteur</h2>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                Charge le jeu de données de démonstration (comptes, joueurs, organisations, opportunités, événements) dans la base réelle —
+                sans écraser le contenu existant. Les ouvertures de session visiteur sont désactivables à tout moment ; les anciens mots de
+                passe publiés sont invalidés côté serveur.
+              </p>
+            </div>
+          </div>
+          <span className={cn('chip', demoAccountsActive ? 'border-green-500/40 text-green-400' : 'border-border text-muted-foreground')}>
+            {demoAccountsActive ? 'Accès démo ouverts' : 'Accès démo fermés'}
+          </span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button onClick={doLoadDemo} disabled={busyDemo} className="btn-ghosty !py-2 text-xs disabled:opacity-50"><Database size={13} /> {busyDemo ? 'Chargement…' : 'Charger les données de démo'}</button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setDemoAccounts(!demoAccountsActive)}
+              className={cn('rounded-lg border px-3 py-2 text-xs font-semibold',
+                demoAccountsActive ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'border-green-500/50 text-green-400 hover:bg-green-500/10')}
+            >
+              {demoAccountsActive ? <span className="inline-flex items-center gap-1.5"><Lock size={13} /> Fermer les accès démo</span> : <span className="inline-flex items-center gap-1.5"><LockOpen size={13} /> Ouvrir les accès démo</span>}
+            </button>
+          )}
+        </div>
+        {demoResult && <p className="mt-3 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">{demoResult}</p>}
+        {isSuperAdmin && (
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            Ouverture : les visiteurs peuvent entrer dans les espaces de démonstration depuis les pages publiques (sessions de 12 h, débit limité).
+            Fermeture : les boutons publics sont désactivés et aucune connexion par mot de passe n'est possible sur ces comptes.
+          </p>
+        )}
+      </div>
+
       <div className="card-court overflow-x-auto p-6">
         <table className="w-full min-w-[720px] text-sm">
           <thead><tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -474,7 +547,7 @@ export function AdminAdmins() {
                     m.role === 'admin' ? 'border-[var(--ball)]/50 text-[var(--ball)]'
                       : m.role === 'visitor' ? 'border-red-500/40 text-red-400'
                         : 'border-border text-muted-foreground')}>
-                    {roleLabels[m.role] ?? m.role}
+                    {roleLabels2[m.role] ?? m.role}
                   </span>
                 </td>
                 <td className="py-2.5">
@@ -499,6 +572,14 @@ export function AdminAdmins() {
                       </select>
                       <button
                         disabled={m.id === currentUserId}
+                        onClick={() => { setResetFor(resetFor === m.id ? null : m.id); setResetPwd(''); }}
+                        title="Définir un nouveau mot de passe"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
+                      >
+                        <KeyRound size={12} className="inline" /> Mot de passe
+                      </button>
+                      <button
+                        disabled={m.id === currentUserId}
                         onClick={() => setSuperAdmin(m.id, !m.isSuperAdmin)}
                         className={cn('rounded-md border px-2 py-1 text-xs font-semibold disabled:opacity-40',
                           m.isSuperAdmin ? 'border-border text-muted-foreground hover:text-foreground' : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10')}
@@ -514,6 +595,26 @@ export function AdminAdmins() {
                 </td>
               </tr>
             ))}
+            {resetFor && (
+              <tr className="border-b border-border/50 bg-muted/30">
+                <td colSpan={5} className="py-3">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <span className="text-xs text-muted-foreground">Nouveau mot de passe pour <strong className="text-foreground">{staff.find(m => m.id === resetFor)?.name}</strong> (min. 8 caractères) :</span>
+                    <input
+                      type="text"
+                      value={resetPwd}
+                      onChange={e => setResetPwd(e.target.value)}
+                      placeholder="Nouveau mot de passe"
+                      className="h-9 w-56 rounded-md border border-border bg-background px-2 font-mono2 text-xs"
+                      autoFocus
+                    />
+                    <button onClick={() => doReset(resetFor)} className="btn-ball !px-3 !py-1.5 text-xs">Définir</button>
+                    <button onClick={() => { setResetFor(null); setResetPwd(''); }} className="btn-ghosty !px-3 !py-1.5 text-xs">Annuler</button>
+                  </div>
+                  <p className="mt-2 text-right text-[11px] text-muted-foreground">La personne est notifiée ; le mot de passe n'apparaît nulle part ailleurs.</p>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         <p className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
@@ -522,6 +623,24 @@ export function AdminAdmins() {
           au journal d'audit et notifiée à la personne concernée. Le modérateur et le support n'ont jamais
           automatiquement accès aux fonctions d'administration (plans, paramètres, gestion des admins).
         </p>
+      </div>
+
+      {/* ── Sécurité du compte ── */}
+      <div className="card-court mt-6 p-6">
+        <h2 className="mb-1 font-display text-lg font-bold">Mon mot de passe</h2>
+        <p className="mb-4 text-xs text-muted-foreground">Modifiez votre mot de passe personnel à tout moment — aucune réinitialisation par e-mail sur CourtLink (« pas mail »), ce formulaire est la voie officielle.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block text-xs"><span className="mb-1.5 block font-semibold uppercase tracking-wider text-muted-foreground">Mot de passe actuel</span>
+            <input type="password" value={pwdCurrent} onChange={e => setPwdCurrent(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" /></label>
+          <label className="block text-xs"><span className="mb-1.5 block font-semibold uppercase tracking-wider text-muted-foreground">Nouveau (min. 8)</span>
+            <input type="password" value={pwdNext} onChange={e => setPwdNext(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" /></label>
+          <label className="block text-xs"><span className="mb-1.5 block font-semibold uppercase tracking-wider text-muted-foreground">Confirmation</span>
+            <input type="password" value={pwdConfirm} onChange={e => setPwdConfirm(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm" /></label>
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button onClick={doOwnPassword} className="btn-ball !py-2 text-xs"><ShieldCheck size={13} /> Mettre à jour mon mot de passe</button>
+          {pwdMsg && <span className="text-xs text-muted-foreground">{pwdMsg}</span>}
+        </div>
       </div>
     </div>
   );

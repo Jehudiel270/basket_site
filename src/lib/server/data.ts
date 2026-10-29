@@ -174,11 +174,16 @@ export async function buildState(user: SessionUser | null): Promise<DemoState & 
       })
     : [];
 
+  /* Accès démo ouverts ? (décision du super admin, dérivée du journal d'audit) */
+  const { demoAccountsActive } = await import('./demo-data');
+  const demoOpen = await demoAccountsActive(db);
+
   return {
     role: (user?.role as Role) ?? 'visitor',
     loggedIn: !!user,
     currentUserId: myPlayers[0]?.id ?? user?.id ?? '',
     isSuperAdmin: !!userRow?.isSuperAdmin,
+    demoAccountsActive: demoOpen,
     staff: staff as StaffMember[],
     players: players.map(mapPlayer),
     organizations: orgs.map(mapOrg),

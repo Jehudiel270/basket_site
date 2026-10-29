@@ -30,6 +30,22 @@ export async function pushAction(action: string, payload: unknown): Promise<bool
   }
 }
 
+/** Comme pushAction, mais renvoie la réponse complète (données + erreurs) pour les actions interactives. */
+export async function pushActionResult<T = Record<string, unknown>>(action: string, payload: unknown): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
+  try {
+    const res = await fetch(`/api/actions/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload ?? {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, status: res.status, error: (data as { error?: string }).error ?? `Erreur ${res.status}` };
+    return { ok: true, status: res.status, data: data as T };
+  } catch {
+    return { ok: false, status: 0, error: 'Serveur indisponible.' };
+  }
+}
+
 /** Charge le snapshot serveur complet (données scoppées par session). */
 export async function fetchState<T>(): Promise<T | null> {
   try {

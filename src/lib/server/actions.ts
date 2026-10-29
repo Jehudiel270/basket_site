@@ -3,7 +3,9 @@
  * Chaque mutation du client arrive ici via POST /api/actions/[action],
  * est validée par session + ownership, puis écrite dans Prisma.
  */
+import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
+import { ensureDemoUsers, ensureDemoContent, lockedHash, DEMO_DOMAIN } from './demo-data';
 import type { SessionUser } from '@/lib/server/data';
 
 const J = (v: unknown): string => JSON.stringify(v ?? []);
@@ -54,7 +56,7 @@ const OPP_FIELDS = ['title', 'type', 'country', 'city', 'position', 'ageRange', 
 const EVENT_FIELDS = ['title', 'kind', 'city', 'country', 'venue', 'date', 'endDate', 'capacity', 'description', 'program', 'price', 'ageRange', 'status', 'image', 'results'];
 const PLAN_FIELDS = ['name', 'audience', 'price', 'currency', 'period', 'features', 'highlighted', 'active'];
 
-export async function applyAction(user: SessionUser | null, action: string, payload: Record<string, never> | any): Promise<{ ok: true }> {
+export async function applyAction(user: SessionUser | null, action: string, payload: Record<string, never> | any): Promise<{ ok: true; [key: string]: unknown }> {
   const u = user;
   const p = (payload ?? {}) as Record<string, any>;
 
@@ -439,6 +441,58 @@ export async function applyAction(user: SessionUser | null, action: string, payl
       await audit(u.name, `Super admin ${on ? 'accordé' : 'retiré'} : ${targetUser.email}`, 'Administration');
       await notify(targetUser.id, on ? 'Statut super administrateur accordé' : 'Statut super administrateur retiré', on ? 'Un super administrateur vous a nommé super administrateur.' : 'Votre statut de super administrateur a été retiré.', on ? 'success' : 'warning');
       break;
+    }
+
+    /* ── Données de démonstration & sécurité ── */
+    case 'loadDemoData': {
+      if (u.role !== 'admin') throw new ActionError('Réservé aux administrateurs.', 403);
+      const users = await ensureDemoUsers(db);
+      const content = await ensureDemoContent(db, users.userIds);
+      await audit(u.name, `Données de démo chargées (+${users.created.length} compte(s), contenu complété)`, 'Administration');
+      return { ok: true, accountsCreated: users.created.length, accountsTotal: users.total, content };
+    }
+
+    case 'setDemoAccounts': {
+      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+      const on = !!p.on;
+      const demoCount = await db.user.count({ where: { email: { endsWith: DEMO_DOMAIN } } });
+      if (demoCount === 0) throw new ActionError('Aucun compte de démonstration en base — chargez d’abord les données de démo.', 400);
+      // Les mots de passe démo sont remplacement par des hashes aléatoires : la
+      // connexion par mot de passe devient impossible, l’accès passe uniquement
+      // par /api/demo-login (session visiteur) quand le mode est ouvert.
+      const hash = lockedHash();
+      const demoRows = await db.user.findMany({ where: { email: { endsWith: DEMO_DOMAIN } }, select: { id: true } });
+      for (const row of demoRows) {
+        await db.user.update({ where: { id: row.id }, data: { passwordHash: hash } });
+      }
+      await audit(u.name, on ? `Comptes démo : ACCÈS OUVERT (${demoCount} comptes)` : 'Comptes démo : ACCÈS FERMÉ', 'Sécurité');
+      return { ok: true, demoAccountsActive: on, accounts: demoCount };
+    }
+
+    case 'resetUserPassword': {
+      const actorRow = await db.user.findUnique({ where: { id: u.id } });
+      if (!actorRow?.isSuperAdmin) throw new ActionError('Réservé aux super administrateurs.', 403);
+      const targetUser = await db.user.findUnique({ where: { id: String(p.userId ?? '') } });
+      if (!targetUser) throw new ActionError('Compte introuvable.', 404);
+      if (targetUser.id === u.id) throw new ActionError('Pour votre propre compte, utilisez le changement de mot de passe personnel.', 400);
+      const pwd = String(p.password ?? '');
+      if (pwd.length < 8) throw new ActionError('Mot de passe trop court : 8 caractères minimum.', 400);
+      await db.user.update({ where: { id: targetUser.id }, data: { passwordHash: bcrypt.hashSync(pwd, 10) } });
+      await audit(u.name, `Mot de passe réinitialisé : ${targetUser.email}`, 'Sécurité');
+      await notify(targetUser.id, 'Mot de passe réinitialisé', 'Un super administrateur a défini un nouveau mot de passe pour votre compte. Contactez l’équipe si vous n’êtes pas à l’origine de cette demande.', 'warning');
+      return { ok: true, email: targetUser.email };
+    }
+
+    case 'changeOwnPassword': {
+      const me = await db.user.findUnique({ where: { id: u.id } });
+      if (!me) throw new ActionError('Compte introuvable.', 404);
+      if (!bcrypt.compareSync(String(p.current ?? ''), me.passwordHash)) throw new ActionError('Mot de passe actuel incorrect.', 403);
+      const next = String(p.next ?? '');
+      if (next.length < 8) throw new ActionError('Nouveau mot de passe trop court : 8 caractères minimum.', 400);
+      await db.user.update({ where: { id: me.id }, data: { passwordHash: bcrypt.hashSync(next, 10) } });
+      await audit(me.name, 'Mot de passe personnel modifié', 'Sécurité');
+      return { ok: true };
     }
 
     /* ── Paramètres plateforme ── */

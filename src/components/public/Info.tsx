@@ -7,7 +7,6 @@ import {
   Flag, KeyRound, Smartphone, FileText, Scale, Eye, Lock, AlertTriangle, Play, RefreshCw, Target,
 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
-import { toast } from 'sonner';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { demoAccounts, roleLabels } from '@/lib/permissions';
@@ -17,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 /* ── Connexion avec comptes démo ── */
 export function LoginPage() {
-  const { login, dataSource } = useCourtLink();
+  const { login, demoLogin, dataSource, demoAccountsActive } = useCourtLink();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [busy, setBusy] = useState(false);
@@ -69,19 +68,26 @@ export function LoginPage() {
 
       <div>
         <div className="card-court p-5">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold"><Play size={16} className="text-[var(--ball)]" /> {dataSource === 'api' ? 'Comptes de la base réelle' : 'Mode démonstration'}</h2>
-          <p className="mb-4 text-xs text-muted-foreground">{dataSource === 'api' ? 'Comptes semés en base (mot de passe : demo1234) — la connexion passe par la vraie authentification. Changez ces mots de passe avant l\u2019ouverture publique.' : "Un clic = connexion instantanée avec le rôle choisi. Le menu, les pages et les permissions s'adaptent."}</p>
+          <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold"><Play size={16} className="text-[var(--ball)]" /> {dataSource === 'api' ? 'Comptes de démonstration' : 'Mode démonstration'}</h2>
+          <p className="mb-4 text-xs text-muted-foreground">{dataSource === 'api'
+            ? (demoAccountsActive
+              ? 'Accès de démonstration ouverts par l’administration — un clic vous connecte avec le rôle choisi (session limitée à 12 h).'
+              : 'Les accès de démonstration sont désactivés par l’administration. Un super administrateur peut les ouvrir depuis la console « Administrateurs ».')
+            : "Un clic = connexion instantanée avec le rôle choisi. Le menu, les pages et les permissions s'adaptent."}</p>
+          {dataSource === 'api' && !demoAccountsActive && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] leading-relaxed text-amber-300">
+              <Lock size={13} className="mt-0.5 shrink-0" />
+              Connexions démo verrouillées : les anciens mots de passe publiés ont été invalidés côté serveur. Seule l’ouverture par le super administrateur permet l’accès visiteur.
+            </div>
+          )}
           <div className="grid gap-2">
             {demoAccounts.map(a => (
-              <button key={a.role} onClick={() => {
+              <button key={a.role} disabled={dataSource === 'api' && !demoAccountsActive} onClick={() => {
                 if (dataSource === 'api') {
-                  signIn('credentials', { redirect: false, email: a.email, password: 'demo1234' }).then(res => {
-                    if (res?.error) toast.error('Compte démo absent de la base réelle — lancez bun prisma/seed.ts.');
-                    else navigate(a.role === 'admin' ? '/admin' : '/app');
-                  });
+                  demoLogin(a.role).then(ok => { if (ok) navigate(a.role === 'admin' ? '/admin' : '/app'); });
                 } else { login(a.role, a.name); navigate(a.role === 'admin' ? '/admin' : '/app'); }
               }}
-                className="group flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-all hover:border-[var(--ball)] hover:bg-[color-mix(in_oklch,var(--ball)_6%,transparent)]">
+                className={cn('group flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-all', dataSource === 'api' && !demoAccountsActive ? 'cursor-not-allowed opacity-45' : 'hover:border-[var(--ball)] hover:bg-[color-mix(in_oklch,var(--ball)_6%,transparent)]')}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_oklch,var(--ball)_14%,transparent)] font-display text-xs font-bold text-[var(--ball)]">
                   {a.name.split(' ').map(x => x[0]).slice(0, 2).join('')}
                 </span>
