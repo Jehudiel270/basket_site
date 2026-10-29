@@ -52,19 +52,31 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Mot de passe', type: 'password' },
       },
       async authorize(credentials, req) {
-        const email = credentials?.email?.trim().toLowerCase();
-        const password = credentials?.password;
-        if (!email || !password) return null;
-        const ip = (typeof req === 'object' && req && 'headers' in req
-          ? (req as Request).headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local'
-          : 'local');
-        const key = attemptKey(email, ip);
-        if (tooManyAttempts(key)) return null; // message générique : aucune fuite d'information
-        const user = await db.user.findUnique({ where: { email } });
-        const ok = !!user && bcrypt.compareSync(password, user.passwordHash);
-        if (!user || !ok) { recordFailure(key); return null; }
-        clearAttempts(key);
-        return { id: user.id, name: user.name, email: user.email, role: user.role };
+        try {
+          const email = credentials?.email?.trim().toLowerCase();
+          const password = credentials?.password;
+          if (!email || !password) return null;
+          // IP client : Headers web OU objet plat, selon l'adaptateur NextAuth — jamais d'exception.
+          let ip = 'local';
+          try {
+            const h: unknown = (req as { headers?: unknown } | undefined)?.headers;
+            if (h && typeof (h as Headers).get === 'function') {
+              ip = (h as Headers).get('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
+            } else if (h && typeof h === 'object') {
+              ip = String((h as Record<string, string>)['x-forwarded-for'] ?? '').split(',')[0]?.trim() || 'local';
+            }
+          } catch { ip = 'local'; }
+          const key = attemptKey(email, ip);
+          if (tooManyAttempts(key)) return null; // message générique : aucune fuite d'information
+          const user = await db.user.findUnique({ where: { email } });
+          const ok = !!user && bcrypt.compareSync(password, user.passwordHash);
+          if (!user || !ok) { recordFailure(key); return null; }
+          clearAttempts(key);
+          return { id: user.id, name: user.name, email: user.email, role: user.role };
+        } catch (e) {
+          console.error('authorize: erreur inattendue', e);
+          return null;
+        }
       },
     }),
   ],
