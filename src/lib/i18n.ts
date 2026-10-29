@@ -50,8 +50,8 @@ export const dict: Record<Lang, Translations> = {
     'footer.report': 'Signaler un contenu',
     'footer.verify': 'Vérification des comptes',
     'footer.minors': 'Protection des mineurs',
-    'footer.copyright': '© 2026 CourtLink (prototype de démonstration) — Cotonou, Bénin. Aucune transaction réelle.',
-    'footer.demoActive': 'Mode démonstration actif — données fictives',
+    'footer.copyright': '© 2026 CourtLink — Cotonou, Bénin. Paiements des abonnements sécurisés via FedaPay (Mobile Money & cartes).',
+    'footer.demoActive': 'Mode démonstration actif — données fictives (paiements réels une fois les clés FedaPay configurées)',
 
     // Hero
     'hero.badge': 'Le réseau de confiance du basketball · Bénin & Afrique de l\u2019Ouest',
@@ -209,8 +209,8 @@ export const dict: Record<Lang, Translations> = {
     'footer.report': 'Report content',
     'footer.verify': 'Account verification',
     'footer.minors': 'Minor protection',
-    'footer.copyright': '© 2026 CourtLink (demo prototype) — Cotonou, Benin. No real transactions.',
-    'footer.demoActive': 'Demo mode active — fictional data',
+    'footer.copyright': '© 2026 CourtLink — Cotonou, Benin. Subscription payments secured via FedaPay (Mobile Money & cards).',
+    'footer.demoActive': 'Demo mode active — fictional data (real payments once FedaPay keys are configured)',
 
     // Hero
     'hero.badge': 'Basketball\u2019s trusted network · Benin & West Africa',
