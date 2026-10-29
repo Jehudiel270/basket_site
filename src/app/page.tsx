@@ -206,7 +206,7 @@ export default function Home() {
       <RealSessionSync />
       <div className="flex min-h-screen flex-col">
         <PublicHeader route={route} />
-        <main className="flex-1" key={route}>{page}</main>
+        <main className="flex-1 page-enter" key={route}>{page}</main>
         <PublicFooter />
       </div>
     </SessionProvider>
@@ -292,7 +292,7 @@ function DemoLauncher({ publicMode }: { publicMode?: boolean }) {
           Un super administrateur peut les ouvrir depuis la console « Administrateurs ».
         </p>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="stagger grid gap-4 sm:grid-cols-2">
         {accounts.map(a => (
           <div key={a.role} className={cn('card-court flex items-center gap-4 p-5', role === a.role && loggedIn && 'border-[var(--ball)]')}>
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color-mix(in_oklch,var(--ball)_14%,transparent)] font-display text-sm font-bold text-[var(--ball)]">

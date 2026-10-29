@@ -6,7 +6,7 @@ import {
   Crown, HeartHandshake, Search, Upload, Check, Mail, MessageSquare, Send,
   Flag, KeyRound, Smartphone, FileText, Scale, Eye, Lock, AlertTriangle, Play, RefreshCw, Target,
 } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { navigate } from '@/lib/router';
 import { useCourtLink } from '@/lib/store';
 import { demoAccounts, roleLabels } from '@/lib/permissions';
@@ -29,7 +29,8 @@ export function LoginPage() {
       const res = await signIn('credentials', { redirect: false, email, password: pwd });
       setBusy(false);
       if (res?.error) { setErr('E-mail ou mot de passe incorrect.'); return; }
-      navigate('/app');
+      const session = await getSession();
+      navigate(session?.user?.role === 'admin' ? '/admin' : '/app');
     } else {
       login('player', 'S\u00e8m\u00e8vo Hountondji');
     }

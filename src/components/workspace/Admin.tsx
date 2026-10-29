@@ -37,7 +37,7 @@ export function AdminOverview() {
         sub="Pilotage complet : indicateurs calculés sur les données réelles de la démonstration (aucun chiffre inventé)."
         actions={<button onClick={() => { const data = JSON.stringify(useCourtLink.getState(), null, 2); const blob = new Blob([data], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'courtlink-admin-export.json'; a.click(); }} className="btn-ghosty !py-2 text-xs"><Download size={14} /> Exporter les données</button>}
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => (
           <div key={s.l} className="card-court p-5">
             <div className="flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-muted-foreground">{s.l}</span><s.icon size={15} className="text-[var(--ball)]" /></div>
@@ -136,7 +136,7 @@ export function AdminOrganizations() {
   return (
     <div>
       <WorkspaceHeader title="Clubs, académies & structures" sub="Statuts de vérification et suspensions." />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="stagger grid gap-4 md:grid-cols-2">
         {organizations.map(o => (
           <div key={o.id} className="card-court p-5">
             <div className="flex items-center gap-3">

@@ -297,6 +297,23 @@
 @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 .fade-up { animation: fadeUp .55s cubic-bezier(.2,.8,.2,1) both; }
 
+/* ── Transitions entre pages (fondu + glissement doux, sans brutalité) ── */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(14px) scale(.996); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.page-enter { animation: pageEnter .45s cubic-bezier(.22,.9,.24,1) both; will-change: opacity, transform; }
+
+/* cascade d'entrée : les blocs d'une même page apparaissent en léger décalé */
+.page-enter .stagger > * { animation: pageEnter .5s cubic-bezier(.22,.9,.24,1) both; }
+.page-enter .stagger > *:nth-child(1) { animation-delay: .02s; }
+.page-enter .stagger > *:nth-child(2) { animation-delay: .07s; }
+.page-enter .stagger > *:nth-child(3) { animation-delay: .12s; }
+.page-enter .stagger > *:nth-child(4) { animation-delay: .17s; }
+.page-enter .stagger > *:nth-child(5) { animation-delay: .22s; }
+.page-enter .stagger > *:nth-child(6) { animation-delay: .27s; }
+.page-enter .stagger > *:nth-child(n+7) { animation-delay: .32s; }
+
 @keyframes popIn { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
 .pop-in { animation: popIn .35s cubic-bezier(.2,.8,.2,1) both; }
 

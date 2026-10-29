@@ -40,7 +40,7 @@ export function PlayerDashboard() {
         sub="Voici l'état de votre visibilité et de vos démarches de recrutement aujourd'hui."
         actions={<button onClick={() => navigate('/app/profil')} className="btn-ball !py-2 text-xs">Compléter mon profil</button>}
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card-court p-5"><div className="flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-muted-foreground">Consultations profil</span><Eye size={15} className="text-[var(--ball)]" /></div><p className="mt-2 font-display text-3xl font-black tnum">{profileViews}</p><p className="mt-1 text-xs text-green-400">+18 cette semaine</p></div>
         <div className="card-court p-5"><div className="flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-muted-foreground">Vues des vidéos</span><Play size={15} className="text-[var(--ball)]" /></div><p className="mt-2 font-display text-3xl font-black tnum">{videoViews}</p><p className="mt-1 text-xs text-green-400">+11 cette semaine</p></div>
         <div className="card-court p-5"><div className="flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-muted-foreground">Candidatures actives</span><Send size={15} className="text-[var(--ball)]" /></div><p className="mt-2 font-display text-3xl font-black tnum">{myApps.filter(a => a.status !== 'Refusé').length}</p><p className="mt-1 text-xs text-muted-foreground">{myApps.length} au total</p></div>

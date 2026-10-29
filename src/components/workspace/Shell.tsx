@@ -162,7 +162,7 @@ export function WorkspaceShell({ route, children }: { route: string; children: R
             </button>
           </div>
         </div>
-        <main className="p-4 md:p-6">{children}</main>
+        <main key={route} className="page-enter p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
