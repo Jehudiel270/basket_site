@@ -120,7 +120,7 @@ export function PublicHeader({ route }: { route: string }) {
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2">
           <LangToggle />
           <ThemeToggle />
           {loggedIn ? (
@@ -146,7 +146,7 @@ export function PublicHeader({ route }: { route: string }) {
               </button>
               <button
                 onClick={() => { if (isApiMode()) void signOut(); logout(); navigate('/'); }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:text-destructive"
+                className="hidden h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:border-destructive hover:text-destructive sm:flex"
                 aria-label="Se déconnecter / Log out"
               >
                 <LogOut size={15} />
@@ -178,9 +178,17 @@ export function PublicHeader({ route }: { route: string }) {
               </button>
             ))}
             {loggedIn ? (
-              <button onClick={() => { navigate(role === 'admin' ? '/admin' : '/app'); setOpen(false); }} className="btn-ball mt-2">
-                Mon espace {roleLabels[role]}
-              </button>
+              <>
+                <button onClick={() => { navigate(role === 'admin' ? '/admin' : '/app'); setOpen(false); }} className="btn-ball mt-2">
+                  Mon espace {roleLabels[role]}
+                </button>
+                <button
+                  onClick={() => { if (isApiMode()) void signOut(); logout(); navigate('/'); setOpen(false); }}
+                  className="mt-1 flex items-center justify-center gap-2 rounded-[3px] border border-border px-3 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground hover:border-destructive hover:text-destructive sm:hidden"
+                >
+                  <LogOut size={14} /> {t('header.logout')}
+                </button>
+              </>
             ) : (
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button onClick={() => { navigate('/connexion'); setOpen(false); }} className="btn-ghosty !py-2 text-xs">{t('header.login')}</button>

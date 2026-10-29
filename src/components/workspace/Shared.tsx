@@ -23,7 +23,7 @@ export function MessagesView() {
   return (
     <div>
       <WorkspaceHeader title="Messagerie" sub="Conversations de démonstration. Les mineurs ne reçoivent que des messages approuvés par leur tuteur." />
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
         <div className="card-court !translate-y-0 !hover:transform-none flex max-h-[70vh] flex-col overflow-hidden">
           <div className="border-b border-border p-3">
             <div className="relative">
@@ -92,7 +92,7 @@ export function SubscriptionView() {
   return (
     <div>
       <WorkspaceHeader title="Abonnement & facturation" sub="Gestion simulée : aucun paiement réel. En production : Mobile Money FCFA, cartes et virements UEMOA." />
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <section className="card-court p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">

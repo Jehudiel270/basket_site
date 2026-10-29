@@ -137,9 +137,10 @@ export function SectionHead({ eyebrow, title, sub, right }: { eyebrow?: string; 
 export function BarChart({ data, height = 120, suffix = '' }: { data: { label: string; value: number }[]; height?: number; suffix?: string }) {
   const max = Math.max(...data.map(d => d.value), 1);
   return (
-    <div className="flex items-end gap-3" style={{ height }}>
+    <div className="overflow-x-auto">
+    <div className="flex items-end gap-2 md:gap-3" style={{ height, minWidth: 'min(100%, ' + Math.max(data.length * 56, 200) + 'px)' }}>
       {data.map((d) => (
-        <div key={d.label} className="flex flex-1 flex-col items-center gap-1.5">
+        <div key={d.label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
           <span className="text-[10px] font-semibold tnum text-[var(--ball)]">{d.value}{suffix}</span>
           <div className="w-full overflow-hidden rounded-t-md bg-muted/60" style={{ height: height - 42 }}>
             <div
@@ -147,9 +148,10 @@ export function BarChart({ data, height = 120, suffix = '' }: { data: { label: s
               style={{ height: `${(d.value / max) * 100}%` }}
             />
           </div>
-          <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{d.label}</span>
+          <span className="max-w-full truncate text-[9px] uppercase tracking-wide text-muted-foreground">{d.label}</span>
         </div>
       ))}
+    </div>
     </div>
   );
 }

@@ -130,7 +130,7 @@ export function PlayersDirectory() {
       </div>
 
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="overflow-hidden rounded-xl border border-border">
               <div className="skeleton h-44" />
@@ -145,7 +145,7 @@ export function PlayersDirectory() {
           action={<button onClick={() => setF({ query: '', position: 'Tous les postes', country: 'Tous les pays', category: 'Toutes catégories', minHeight: 160, verifiedOnly: false, availableOnly: false, sort: 'Indice' })} className="btn-ball">Réinitialiser les filtres</button>}
         />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {results.map((p, i) => (
             <div key={p.id} className="relative">
               <PlayerCard player={p} index={i} />

@@ -123,18 +123,18 @@ export function AdvancedSearch() {
         actions={<button onClick={() => navigate('/app/comparaison')} className="btn-ghosty !py-2 text-xs"><GitCompareArrows size={14} /> Comparateur ({compare.length}/3)</button>}
       />
       <div className="card-court mb-6 p-4">
-        <div className="grid gap-2.5 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={f.q} onChange={e => setF({ ...f, q: e.target.value })} placeholder="Nom, ville, club…" className="h-11 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none focus:border-[var(--ball)]" />
+            <input value={f.q} onChange={e => setF({ ...f, q: e.target.value })} placeholder="Nom, ville, club…" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none focus:border-[var(--ball)]" />
           </div>
-          <select value={f.position} onChange={e => setF({ ...f, position: e.target.value })} className="h-11 rounded-lg border border-input bg-background px-3 text-sm">
+          <select value={f.position} onChange={e => setF({ ...f, position: e.target.value })} className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm">
             <option>Tous les postes</option>{POSITIONS.map(p => <option key={p}>{p}</option>)}
           </select>
-          <select value={f.country} onChange={e => setF({ ...f, country: e.target.value })} className="h-11 rounded-lg border border-input bg-background px-3 text-sm">
+          <select value={f.country} onChange={e => setF({ ...f, country: e.target.value })} className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm">
             <option>Tous les pays</option>{COUNTRIES.map(c => <option key={c}>{c}</option>)}
           </select>
-          <select value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })} className="h-11 rounded-lg border border-input bg-background px-3 text-sm">
+          <select value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })} className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm">
             <option>Toutes catégories</option>{['U17', 'U19', 'U21', 'Espoir', 'Senior'].map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
@@ -165,7 +165,7 @@ export function AdvancedSearch() {
       {results.length === 0 ? (
         <EmptyState title="Aucun résultat" hint="Assouplissez les filtres (taille, indice, pays) pour élargir le vivier." />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {results.map((p, i) => (
             <div key={p.id} className="relative">
               <PlayerCard player={p} index={i} compare={compare.includes(p.id)} onCompare={(id) => setCompare(c => c.includes(id) ? c.filter(x => x !== id) : c.length >= 3 ? c : [...c, id])} />

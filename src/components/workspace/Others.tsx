@@ -401,7 +401,7 @@ export function ModeratorVerifications() {
   return (
     <div>
       <WorkspaceHeader title="Demandes de vérification" sub="Examinez les documents transmis et prenez une décision justifiée. Le badge se met à jour automatiquement." />
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
         <div className="space-y-3">
           {verifications.map(x => (
             <button key={x.id} onClick={() => { setActive(x.id); setJustification(x.justification ?? ''); }}
@@ -584,7 +584,7 @@ export function SupportTickets({ compact }: { compact?: boolean }) {
   const [reply, setReply] = useState('');
   const t = tickets.find(x => x.id === active);
   return (
-    <div className={cn(compact ? 'grid gap-6 lg:grid-cols-[1fr_360px]' : '')}>
+    <div className={cn(compact ? 'grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]' : '')}>
       <div className="space-y-2.5">
         {tickets.slice(0, compact ? 4 : 20).map(x => (
           <button key={x.id} onClick={() => setActive(x.id)} className={cn('card-court flex w-full flex-wrap items-center gap-3 !translate-y-0 p-3.5 text-left', active === x.id && 'border-[var(--ball)]')}>

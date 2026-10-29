@@ -45,10 +45,10 @@ export function AdminOverview() {
           </div>
         ))}
       </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-3">
         <section className="card-court p-6">
           <h2 className="mb-4 font-display text-lg font-bold">Répartition par pays</h2>
-          <BarChart data={[...new Set(players.map(p => p.country))].map(c => ({ label: c.slice(0, 4), value: players.filter(p => p.country === c).length }))} />
+          <BarChart data={[...new Set(players.map(p => p.country))].map(c => ({ label: c.slice(0, 4), value: players.filter(p => p.country === c).length })).sort((a, b) => b.value - a.value).slice(0, 6)} />
         </section>
         <section className="card-court p-6">
           <h2 className="mb-4 font-display text-lg font-bold">Pipeline des candidatures</h2>

@@ -66,7 +66,7 @@ export function WorkspaceShell({ route, children }: { route: string; children: R
   const base = isAdmin ? '/admin' : '/app';
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px]">
+    <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[1600px]">
       {/* Sidebar */}
       <aside className={cn(
         'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-[var(--court)] transition-transform duration-300 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:translate-x-0',

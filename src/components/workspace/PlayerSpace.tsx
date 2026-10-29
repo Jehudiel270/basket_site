@@ -47,7 +47,7 @@ export function PlayerDashboard() {
         <div className="card-court p-5"><div className="flex items-center justify-between"><span className="text-xs uppercase tracking-wider text-muted-foreground">Indice CourtLink</span><TrendingUp size={15} className="text-[var(--ball)]" /></div><p className="mt-2 font-display text-3xl font-black tnum">{me.rating}</p><p className="mt-1 text-xs text-muted-foreground">Top 15% de votre catégorie</p></div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <section className="card-court p-6">
             <div className="mb-4 flex items-center justify-between">
@@ -156,7 +156,7 @@ export function PlayerProfileEdit() {
   return (
     <div>
       <WorkspaceHeader title="Mon profil sportif" sub="Chaque modification se répercute immédiatement sur votre profil public et dans les recherches des recruteurs." />
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <section className="card-court p-6">
             <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><User size={17} className="text-[var(--ball)]" /> Informations sportives</h2>

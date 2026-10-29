@@ -154,40 +154,48 @@
   box-shadow: 5px 5px 0 0 var(--press);
 }
 
-/* Bouton tampon : majuscules espacées, ombre dure qui s'écrase au clic */
-.btn-ball {
-  @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] transition-all duration-150;
-  background: var(--ball);
-  color: oklch(0.16 0.02 50);
-  box-shadow: 3px 3px 0 0 var(--press);
-}
-.btn-ball:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 0 var(--press);
-}
-.btn-ball:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 0 var(--press);
-}
+/*
+ * Boutons & puces « tampon » — placés dans @layer components :
+ * Tailwind v4 donne priorité aux règles NON-layered sur les utilities.
+ * Sans couche, `inline-flex` ici écraserait `hidden` / `sm:inline-flex`
+ * appliqués sur les mêmes éléments (bug de débordement du header mobile).
+ */
+@layer components {
+  /* Bouton tampon : majuscules espacées, ombre dure qui s'écrase au clic */
+  .btn-ball {
+    @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] transition-all duration-150;
+    background: var(--ball);
+    color: oklch(0.16 0.02 50);
+    box-shadow: 3px 3px 0 0 var(--press);
+  }
+  .btn-ball:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 var(--press);
+  }
+  .btn-ball:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 0 var(--press);
+  }
 
-/* Bouton contour : à l'écran, se remplit au survol comme un tampon encré */
-.btn-ghosty {
-  @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] border border-foreground/25 transition-all duration-150;
-  background: transparent;
-  color: var(--foreground);
-}
-.btn-ghosty:hover {
-  border-color: var(--press);
-  background: var(--ball);
-  color: oklch(0.16 0.02 50) !important;
-  box-shadow: 3px 3px 0 0 var(--press);
-}
-.btn-ghosty svg { color: inherit; }
+  /* Bouton contour : à l'écran, se remplit au survol comme un tampon encré */
+  .btn-ghosty {
+    @apply inline-flex items-center gap-2 justify-center rounded-[3px] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] border border-foreground/25 transition-all duration-150;
+    background: transparent;
+    color: var(--foreground);
+  }
+  .btn-ghosty:hover {
+    border-color: var(--press);
+    background: var(--ball);
+    color: oklch(0.16 0.02 50) !important;
+    box-shadow: 3px 3px 0 0 var(--press);
+  }
+  .btn-ghosty svg { color: inherit; }
 
-/* Puce carrée monospace — remplace les pilules arrondies */
-.chip {
-  font-family: var(--font-mono);
-  @apply inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] border;
+  /* Puce carrée monospace — remplace les pilules arrondies */
+  .chip {
+    font-family: var(--font-mono);
+    @apply inline-flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] border;
+  }
 }
 
 /* Tag d'étiquette : petite case mono pour méta-infos */
